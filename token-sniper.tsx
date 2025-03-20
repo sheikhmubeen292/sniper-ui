@@ -97,6 +97,9 @@ interface Wallet {
 
 interface HistoryData {
   tokenAddress: string;
+  wallet: {
+    publicKey: string;
+  };
   buyAmount: number;
   gasFee: string;
   slippage: number;
@@ -329,6 +332,7 @@ export default function TokenSniper() {
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [showTokenInfo, setShowTokenInfo] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState({
     autoSell: false,
     stopLoss: 50,
@@ -466,15 +470,17 @@ export default function TokenSniper() {
       gasFee: gasPrice,
       slippage: slippage,
     };
-
+    setIsLoading(true);
     const { message, success } = await createSniper(body);
 
     if (success) {
       showToast(message, "success");
       setTokenInfo(null);
       setTargetTokenAddress("");
+      setIsLoading(false);
     } else {
       showToast(message, "error");
+      setIsLoading(false);
     }
   };
 
@@ -532,6 +538,7 @@ export default function TokenSniper() {
   };
 
   const handleSettingChanges = async () => {
+    setIsLoading(true);
     const { data } = await createSniperSettings(settings);
 
     if (data) {
@@ -547,6 +554,7 @@ export default function TokenSniper() {
         safetyFeatures: data.safetyFeatures,
       });
       showToast("Settings are saved. Successfully!", "success");
+      setIsLoading(false);
     }
   };
 
@@ -554,6 +562,7 @@ export default function TokenSniper() {
 
   // Api call of add a private key of wallet
   const handleAddPrivateKey = async () => {
+    setIsLoading(true);
     const { message } = await savePrivateKey({
       privateKey: addWalletPrivateKey,
     });
@@ -561,6 +570,7 @@ export default function TokenSniper() {
     setAddWalletPrivateKey("");
     showToast(message, "success");
     fetchUserWallets();
+    setIsLoading(false);
   };
   ///////////////////////////////////////
 
@@ -588,11 +598,13 @@ export default function TokenSniper() {
 
   // Api call of generate the new wallet
   const handleCreateWallet = async () => {
+    setIsLoading(true);
     const { data } = await generateWallet();
 
     setNewWalletAddress(data?.publicKey);
     setGeneratedPrivateKey(data?.privateKey);
     fetchUserWallets();
+    setIsLoading(false);
   };
   ///////////////////////////////////////
 
@@ -780,6 +792,11 @@ export default function TokenSniper() {
     <ThemeProvider>
       <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-white dark:from-black dark:via-zinc-950 dark:to-black text-zinc-900 dark:text-white p-4 md:p-6 overflow-hidden relative transition-colors duration-300">
         {/* Background decorative elements */}
+        {isLoading && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#000000a6] backdrop-blur-sm">
+            <div className="loader"></div>
+          </div>
+        )}
         <>
           <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 opacity-20">
             <motion.div
@@ -1449,10 +1466,12 @@ export default function TokenSniper() {
                   <TabsContent value="monitor" className="m-0">
                     <div className="space-y-4 overflow-x-auto">
                       <div className="min-w-[640px] bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg overflow-hidden">
-                        <div className="grid grid-cols-5 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-gray-100/40 dark:bg-black/40">
+                        <div className="grid grid-cols-7 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-gray-100/40 dark:bg-black/40">
                           <div>Token</div>
-                          <div>Type</div>
+                          <div>Wallet</div>
                           <div>Amount</div>
+                          <div>Gas Fee</div>
+                          <div>Slippage</div>
                           <div>Status</div>
                           <div>Time</div>
                         </div>
@@ -1462,16 +1481,16 @@ export default function TokenSniper() {
                               className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50"
                               key={i}
                             >
-                              <div className="grid grid-cols-5 gap-4 p-4 items-center hover:bg-gray-100/30 dark:hover:bg-zinc-900/30 transition-colors duration-200">
+                              <div className="grid grid-cols-7 gap-4 p-4 items-center hover:bg-gray-100/30 dark:hover:bg-zinc-900/30 transition-colors duration-200">
                                 <div className="truncate text-pink-500 dark:text-pink-400">
                                   {shortenAddress(item.tokenAddress)}
                                 </div>
-                                <div>
-                                  <Badge className="bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 text-white border-none shadow-sm shadow-pink-900/20">
-                                    Buy
-                                  </Badge>
+                                <div className="truncate text-pink-500 dark:text-pink-400">
+                                  {shortenAddress(item.wallet.publicKey)}
                                 </div>
                                 <div>{item.buyAmount} ETH</div>
+                                <div>{item.gasFee}</div>
+                                <div>{item.slippage}</div>
                                 <div>
                                   {item.status ? (
                                     <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
@@ -2016,7 +2035,7 @@ export default function TokenSniper() {
                         </div>
                       </div>
 
-                      <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black p-5 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
+                      {/* <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black p-5 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
                           <Shield className="h-5 w-5 text-pink-500" />
                           Safety Features
@@ -2098,7 +2117,7 @@ export default function TokenSniper() {
                             />
                           </div>
                         </div>
-                      </div>
+                      </div> */}
 
                       <motion.div
                         whileHover={{ scale: 1.02 }}
@@ -2133,10 +2152,12 @@ export default function TokenSniper() {
                   <TabsContent value="history" className="m-0">
                     <div className="space-y-4 overflow-x-auto">
                       <div className="min-w-[640px] bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg overflow-hidden">
-                        <div className="grid grid-cols-5 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-gray-100/40 dark:bg-black/40">
+                        <div className="grid grid-cols-7 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-gray-100/40 dark:bg-black/40">
                           <div>Token</div>
-                          <div>Type</div>
+                          <div>Wallet</div>
                           <div>Amount</div>
+                          <div>Gas Fee</div>
+                          <div>Slippage</div>
                           <div>Status</div>
                           <div>Time</div>
                         </div>
@@ -2146,16 +2167,16 @@ export default function TokenSniper() {
                               className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50"
                               key={i}
                             >
-                              <div className="grid grid-cols-5 gap-4 p-4 items-center hover:bg-gray-100/30 dark:hover:bg-zinc-900/30 transition-colors duration-200">
+                              <div className="grid grid-cols-7 gap-4 p-4 items-center hover:bg-gray-100/30 dark:hover:bg-zinc-900/30 transition-colors duration-200">
                                 <div className="truncate text-pink-500 dark:text-pink-400">
                                   {shortenAddress(item.tokenAddress)}
                                 </div>
-                                <div>
-                                  <Badge className="bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 text-white border-none shadow-sm shadow-pink-900/20">
-                                    Buy
-                                  </Badge>
+                                <div className="truncate text-pink-500 dark:text-pink-400">
+                                  {shortenAddress(item.wallet.publicKey)}
                                 </div>
                                 <div>{item.buyAmount} ETH</div>
+                                <div>{item.gasFee}</div>
+                                <div>{item.slippage}</div>
                                 <div>
                                   {item.status ? (
                                     <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
