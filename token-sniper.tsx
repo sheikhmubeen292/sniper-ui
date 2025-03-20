@@ -1093,7 +1093,7 @@ export default function TokenSniper() {
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <Target className="h-5 w-5 text-pink-500" />
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
-                    Target Token
+                    Pre-Launch Snipe
                   </span>
                 </CardTitle>
                 <CardDescription>
@@ -1471,7 +1471,7 @@ export default function TokenSniper() {
                           <div>Wallet</div>
                           <div>Amount</div>
                           <div>Gas Fee</div>
-                          <div>Slippage</div>
+                          <div>Slippage(%)</div>
                           <div>Status</div>
                           <div>Time</div>
                         </div>
@@ -1490,7 +1490,7 @@ export default function TokenSniper() {
                                 </div>
                                 <div>{item.buyAmount} ETH</div>
                                 <div>{item.gasFee}</div>
-                                <div>{item.slippage}</div>
+                                <div>{item.slippage}%</div>
                                 <div>
                                   {item.status ? (
                                     <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
@@ -2157,7 +2157,7 @@ export default function TokenSniper() {
                           <div>Wallet</div>
                           <div>Amount</div>
                           <div>Gas Fee</div>
-                          <div>Slippage</div>
+                          <div>Slippage(%)</div>
                           <div>Status</div>
                           <div>Time</div>
                         </div>
@@ -2176,7 +2176,7 @@ export default function TokenSniper() {
                                 </div>
                                 <div>{item.buyAmount} ETH</div>
                                 <div>{item.gasFee}</div>
-                                <div>{item.slippage}</div>
+                                <div>{item.slippage}%</div>
                                 <div>
                                   {item.status ? (
                                     <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
