@@ -361,7 +361,8 @@ export default function TokenSniper() {
 
   const chains = [
     { id: "ethereum", name: "Ethereum", icon: DollarSign, color: "pink" },
-    // { id: "base", name: "Base", icon: BarChart3, color: "blue" },
+    { id: "base", name: "Base", icon: BarChart3, color: "blue" },
+    { id: "bsc", name: "BSC", icon: Zap, color: "yellow" },
     // { id: "tron", name: "Tron", icon: Zap, color: "red" },
     // { id: "solana", name: "Solana", icon: Sun, color: "purple" },
   ];
@@ -464,11 +465,14 @@ export default function TokenSniper() {
   };
 
   const handleBuyNow = async () => {
+    const selectedChainId =
+      selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
     const body = {
       tokenAddress: targetTokenAddress,
       buyAmount: amount,
       gasFee: gasPrice,
       slippage: slippage,
+      selectedChainId,
     };
     setIsLoading(true);
     const { message, success } = await createSniper(body);
@@ -485,8 +489,10 @@ export default function TokenSniper() {
   };
 
   const fetchTokenInfo = async (tokenAddress: string) => {
+    const selectedChainId =
+      selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
     if (isAddress(tokenAddress)) {
-      const { data } = await getTokenInfo(tokenAddress);
+      const { data } = await getTokenInfo(tokenAddress, selectedChainId);
 
       if (data) {
         setTokenInfo(data);
@@ -562,9 +568,12 @@ export default function TokenSniper() {
 
   // Api call of add a private key of wallet
   const handleAddPrivateKey = async () => {
+    const selectedChainId =
+      selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
     setIsLoading(true);
     const { message } = await savePrivateKey({
       privateKey: addWalletPrivateKey,
+      selectedChainId,
     });
 
     setAddWalletPrivateKey("");
@@ -773,9 +782,11 @@ export default function TokenSniper() {
   };
 
   const maxBalance = useCallback(async () => {
+    const selectedChainId =
+      selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
     const balance: GetBalanceReturnType = await getBalance(config, {
       address: selectedWallet?.publicKey as Address,
-      chainId: 1,
+      chainId: selectedChainId,
       unit: "ether",
     });
 
@@ -1217,6 +1228,8 @@ export default function TokenSniper() {
                         ? "TRX"
                         : selectedChain.id === "solana"
                         ? "SOL"
+                        : selectedChain.id === "bsc"
+                        ? "BNB"
                         : "Token"}{" "}
                       Amount
                     </Label>
@@ -1229,6 +1242,8 @@ export default function TokenSniper() {
                         ? "1000 TRX"
                         : selectedChain.id === "solana"
                         ? "15.2 SOL"
+                        : selectedChain.id === "bsc"
+                        ? `${Number(balance).toFixed(3)} BNB`
                         : "0"}
                     </span>
                   </div>

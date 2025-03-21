@@ -141,11 +141,11 @@ export function getSniperSettings() {
 }
 
 // API function to get token information
-export function getTokenInfo(tokenAddress: String) {
+export function getTokenInfo(tokenAddress: String, chainId: number) {
   const token = localStorage.getItem("token");
 
   const config = {
-    url: `${serverUrl}/snipe/get-token-info/${tokenAddress}`,
+    url: `${serverUrl}/snipe/get-token-info/${tokenAddress}/${chainId}`,
     method: "GET",
     headers: {
       Authorization: `${token}`,
