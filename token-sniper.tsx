@@ -3,6 +3,7 @@
 import { useState, useEffect, ChangeEvent, useCallback } from "react";
 import { useWeb3Modal } from "@web3modal/wagmi/react";
 import { getBalance, GetBalanceReturnType } from "@wagmi/core";
+import { getL1TokenBalance } from "viem/zksync";
 import { formatEther, isAddress } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -313,6 +314,7 @@ export default function TokenSniper() {
   const [connected, setConnected] = useState(false);
   const [address, setAddress] = useState("");
   const [balance, setBalance] = useState(0);
+  const [tradeSectionBalance, setTradeSectionBalance] = useState(0);
   const [targetTokenAddress, setTargetTokenAddress] = useState("");
   const [amount, setAmount] = useState("0.1");
   const [gasPrice, setGasPrice] = useState(30);
@@ -335,6 +337,10 @@ export default function TokenSniper() {
   const [showTokenInfo, setShowTokenInfo] = useState(false);
   const [isTradeModal, setIsTradeModal] = useState(false);
   const [activeTabString, setActiveTabString] = useState("Buy");
+  const [tradeTokenAddress, setTradeTokenAddress] = useState("");
+  const [tradeAmount, setTradeAmount] = useState("");
+  const [tradeGasPrice, setTradeGasPrice] = useState(25);
+  const [tradeSlippage, setTradeSlippage] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState({
     autoSell: false,
@@ -630,6 +636,18 @@ export default function TokenSniper() {
   };
   ////////////////////////////////////////////////////////
 
+  // Trade function here
+  const handleBuy = async () => {
+    if (!selectedWallet || !tradeTokenAddress || !tradeAmount) return;
+    // await executeTrade("buy", selectedWallet, tradeTokenAddress, tradeAmount, tradeGasPrice, tradeSlippage);
+  };
+
+  const handleSell = async () => {
+    if (!selectedWallet || !tradeTokenAddress || !tradeAmount) return;
+    // await executeTrade("sell", selectedWallet, tradeTokenAddress, tradeAmount, tradeGasPrice, tradeSlippage);
+  };
+  //////////////////////////////////////////
+
   // copy to clipbpard address
   const copyToClipboard = (text: string) => {
     navigator.clipboard
@@ -797,6 +815,35 @@ export default function TokenSniper() {
 
     return Number(formatEther(balance.value));
   }, [selectedWallet?.publicKey]);
+
+  const maxTradeBalance = useCallback(async () => {
+    const selectedChainId =
+      selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
+
+    if (activeTabString === "Buy") {
+      const balance: GetBalanceReturnType = await getBalance(config, {
+        address: selectedWallet?.publicKey as Address,
+        chainId: selectedChainId,
+        unit: "ether",
+      });
+
+      setTradeSectionBalance(Number(formatEther(balance.value)));
+
+      return Number(formatEther(balance.value));
+    } else {
+      const tokenBalance = await getL1TokenBalance(
+        selectedWallet?.publicKey,
+        tradeTokenAddress
+      );
+
+      setTradeSectionBalance(Number(formatEther(tokenBalance)));
+      return Number(formatEther(tokenBalance));
+    }
+  }, [selectedWallet?.publicKey, activeTabString, tradeTokenAddress]);
+
+  useEffect(() => {
+    maxTradeBalance();
+  }, [maxTradeBalance]);
 
   useEffect(() => {
     maxBalance();
@@ -1134,7 +1181,6 @@ export default function TokenSniper() {
                         className="data-[state=active]:bg-pink-500 w-full py-3 data-[state=active]:text-white transition-all duration-200"
                         onClick={() => setActiveTabString("Buy")}
                       >
-                        <Eye className="h-4 w-4 mr-2" />
                         BUY
                       </TabsTrigger>
                       <TabsTrigger
@@ -1142,26 +1188,25 @@ export default function TokenSniper() {
                         className="data-[state=active]:bg-pink-500 w-full py-3 data-[state=active]:text-white transition-all duration-200"
                         onClick={() => setActiveTabString("Sell")}
                       >
-                        <Settings className="h-4 w-4 mr-2" />
                         SELL
                       </TabsTrigger>
                     </TabsList>
                   </Tabs>
                   <div className="space-y-2">
                     <Label
-                      htmlFor="token-address"
+                      htmlFor="trade-token-address"
                       className="text-zinc-700 dark:text-zinc-300"
                     >
                       Token Address
                     </Label>
 
                     <Input
-                      id="token-address"
+                      id="trade-token-address"
                       placeholder="0x..."
                       className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200"
-                      value={targetTokenAddress}
+                      value={tradeTokenAddress}
                       onChange={(e) => {
-                        handleTokenInfo(e);
+                        setTradeTokenAddress(e.target.value);
                       }}
                     />
                   </div>
@@ -1169,47 +1214,51 @@ export default function TokenSniper() {
                   <div className="pt-2">
                     <div className="flex justify-between mb-2">
                       <Label
-                        htmlFor="amount"
+                        htmlFor="trade-amount"
                         className="text-zinc-700 dark:text-zinc-300"
                       >
-                        {selectedChain.id === "ethereum" ||
-                        selectedChain.id === "base"
-                          ? "ETH"
-                          : selectedChain.id === "tron"
-                          ? "TRX"
-                          : selectedChain.id === "solana"
-                          ? "SOL"
-                          : selectedChain.id === "bsc"
-                          ? "BNB"
+                        {activeTabString === "Buy"
+                          ? selectedChain.id === "ethereum" ||
+                            selectedChain.id === "base"
+                            ? "ETH"
+                            : selectedChain.id === "tron"
+                            ? "TRX"
+                            : selectedChain.id === "solana"
+                            ? "SOL"
+                            : selectedChain.id === "bsc"
+                            ? "BNB"
+                            : ""
                           : "Token"}{" "}
                         Amount
                       </Label>
                       <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
                         Balance:{" "}
-                        {selectedChain.id === "ethereum" ||
-                        selectedChain.id === "base"
-                          ? `${Number(balance).toFixed(3)} ETH`
-                          : selectedChain.id === "tron"
-                          ? "1000 TRX"
-                          : selectedChain.id === "solana"
-                          ? "15.2 SOL"
-                          : selectedChain.id === "bsc"
-                          ? `${Number(balance).toFixed(3)} BNB`
-                          : "0"}
+                        {activeTabString === "Buy"
+                          ? selectedChain.id === "ethereum" ||
+                            selectedChain.id === "base"
+                            ? `${Number(tradeSectionBalance).toFixed(3)} ETH`
+                            : selectedChain.id === "tron"
+                            ? "1000 TRX"
+                            : selectedChain.id === "solana"
+                            ? "15.2 SOL"
+                            : selectedChain.id === "bsc"
+                            ? `${Number(tradeSectionBalance).toFixed(3)} BNB`
+                            : "0"
+                          : `${Number(tradeSectionBalance).toFixed(3)}`}
                       </span>
                     </div>
                     <div className="flex gap-2 items-center">
                       <Input
-                        id="amount"
+                        id="trade-amount"
                         type="number"
                         className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
+                        value={tradeAmount}
+                        onChange={(e) => setTradeAmount(e.target.value)}
                       />
                       <Button
                         onClick={async () => {
-                          const balance = await maxBalance();
-                          setAmount(balance.toFixed(3));
+                          const balance = await maxTradeBalance();
+                          balance && setTradeAmount(balance.toFixed(3));
                         }}
                         variant="outline"
                         size="sm"
@@ -1224,13 +1273,13 @@ export default function TokenSniper() {
                     <div>
                       <div className="flex justify-between mb-2">
                         <Label
-                          htmlFor="gas-price"
+                          htmlFor="trade-gas-price"
                           className="text-zinc-700 dark:text-zinc-300"
                         >
                           Gas (Gwei)
                         </Label>
                         <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
-                          {gasPrice}
+                          {tradeGasPrice}
                         </span>
                       </div>
                       <div className="relative pt-1">
@@ -1247,12 +1296,12 @@ export default function TokenSniper() {
                           </div>
                         </div>
                         <Slider
-                          id="gas-price"
+                          id="trade-gas-price"
                           min={5}
                           max={100}
                           step={1}
-                          value={[gasPrice]}
-                          onValueChange={(value) => setGasPrice(value[0])}
+                          value={[tradeGasPrice]}
+                          onValueChange={(value) => setTradeGasPrice(value[0])}
                           className="[&>span]:bg-pink-500"
                         />
                       </div>
@@ -1260,13 +1309,13 @@ export default function TokenSniper() {
                     <div>
                       <div className="flex justify-between mb-2">
                         <Label
-                          htmlFor="slippage"
+                          htmlFor="trade-slippage"
                           className="text-zinc-700 dark:text-zinc-300"
                         >
                           Slippage %
                         </Label>
                         <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
-                          {slippage}%
+                          {tradeSlippage}%
                         </span>
                       </div>
                       <div className="relative pt-1">
@@ -1283,12 +1332,12 @@ export default function TokenSniper() {
                           </div>
                         </div>
                         <Slider
-                          id="slippage"
+                          id="trade-slippage"
                           min={1}
                           max={50}
                           step={1}
-                          value={[slippage]}
-                          onValueChange={(value) => setSlippage(value[0])}
+                          value={[tradeSlippage]}
+                          onValueChange={(value) => setTradeSlippage(value[0])}
                           className="[&>span]:bg-pink-500"
                         />
                       </div>
@@ -1309,8 +1358,10 @@ export default function TokenSniper() {
                   >
                     <Button
                       className="w-200 bg-gradient-to-r text-white from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 shadow-lg shadow-pink-900/20 transition-all duration-200"
-                      // onClick={handleMonitoring}
-                      // disabled={targetTokenAddress.trim() === "" || !amount}
+                      onClick={
+                        activeTabString === "Buy" ? handleBuy : handleSell
+                      }
+                      disabled={tradeTokenAddress.trim() === "" || !tradeAmount}
                     >
                       <motion.div
                         animate={{
@@ -1325,7 +1376,7 @@ export default function TokenSniper() {
                       >
                         <Zap className="h-4 w-4" />
                       </motion.div>
-                      {activeTabString === "Buy" ? "Buy" : "Sell"} Now
+                      Place Trade
                     </Button>
                   </motion.div>
                 </CardFooter>
