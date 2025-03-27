@@ -53,6 +53,7 @@ import {
   RefreshCw,
   Target,
   DollarSign,
+  ArrowLeft,
   Percent,
   AlertTriangle,
   Eye,
@@ -332,6 +333,8 @@ export default function TokenSniper() {
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [showTokenInfo, setShowTokenInfo] = useState(false);
+  const [isTradeModal, setIsTradeModal] = useState(false);
+  const [activeTabString, setActiveTabString] = useState("Buy");
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState({
     autoSell: false,
@@ -464,7 +467,7 @@ export default function TokenSniper() {
     setMonitoring(false);
   };
 
-  const handleBuyNow = async () => {
+  const handleMonitoring = async () => {
     const selectedChainId =
       selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
     const body = {
@@ -1096,30 +1099,62 @@ export default function TokenSniper() {
           )}
           {/* //////////////////// END /////////////////////////// */}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* ==>> target token section  */}
-            <Card className="col-span-1 bg-white/60 dark:bg-black/60 backdrop-blur-sm border-zinc-200/50 dark:border-zinc-800/50 shadow-xl shadow-pink-900/10 overflow-hidden">
-              <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent opacity-50"></div>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Target className="h-5 w-5 text-pink-500" />
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
-                    Pre-Launch Snipe
-                  </span>
-                </CardTitle>
-                <CardDescription>
-                  Set the token you want to snipe
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="token-address"
-                    className="text-zinc-700 dark:text-zinc-300"
-                  >
-                    {selectedChain.name} Token Contract Address
-                  </Label>
-                  <div className="flex gap-2">
+          {isTradeModal ? (
+            <div className="flex justify-center items-center p-4">
+              {/* ==>> Trade token section (Buy and Sell)  */}
+              <Card className="w-full max-w-lg bg-white/60 dark:bg-black/60 backdrop-blur-sm border-zinc-200/50 dark:border-zinc-800/50 shadow-xl shadow-pink-900/10 overflow-hidden">
+                <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent opacity-50"></div>
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-xl">
+                        <Target className="h-5 w-5 text-pink-500" />
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
+                          Snipe Trade
+                        </span>
+                      </CardTitle>
+                      <CardDescription>
+                        Set the token you want to Buy or Sell
+                      </CardDescription>
+                    </div>
+                    <Button
+                      onClick={() => setIsTradeModal(false)}
+                      variant="outline"
+                      className="w-100 border-pink-400/50 dark:border-pink-500/50 bg-white/50 dark:bg-black/50 backdrop-blur-sm text-pink-500 dark:text-pink-400 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 hover:text-pink-600 dark:hover:text-pink-300 transition-all duration-200"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <Tabs defaultValue="Buy">
+                    <TabsList className="bg-gray-100/70 w-full dark:bg-zinc-900/70 p-1 sm:self-auto">
+                      <TabsTrigger
+                        value="Buy"
+                        className="data-[state=active]:bg-pink-500 w-full py-3 data-[state=active]:text-white transition-all duration-200"
+                        onClick={() => setActiveTabString("Buy")}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        BUY
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="Sell"
+                        className="data-[state=active]:bg-pink-500 w-full py-3 data-[state=active]:text-white transition-all duration-200"
+                        onClick={() => setActiveTabString("Sell")}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        SELL
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="token-address"
+                      className="text-zinc-700 dark:text-zinc-300"
+                    >
+                      Token Address
+                    </Label>
+
                     <Input
                       id="token-address"
                       placeholder="0x..."
@@ -1129,230 +1164,443 @@ export default function TokenSniper() {
                         handleTokenInfo(e);
                       }}
                     />
+                  </div>
+
+                  <div className="pt-2">
+                    <div className="flex justify-between mb-2">
+                      <Label
+                        htmlFor="amount"
+                        className="text-zinc-700 dark:text-zinc-300"
+                      >
+                        {selectedChain.id === "ethereum" ||
+                        selectedChain.id === "base"
+                          ? "ETH"
+                          : selectedChain.id === "tron"
+                          ? "TRX"
+                          : selectedChain.id === "solana"
+                          ? "SOL"
+                          : selectedChain.id === "bsc"
+                          ? "BNB"
+                          : "Token"}{" "}
+                        Amount
+                      </Label>
+                      <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
+                        Balance:{" "}
+                        {selectedChain.id === "ethereum" ||
+                        selectedChain.id === "base"
+                          ? `${Number(balance).toFixed(3)} ETH`
+                          : selectedChain.id === "tron"
+                          ? "1000 TRX"
+                          : selectedChain.id === "solana"
+                          ? "15.2 SOL"
+                          : selectedChain.id === "bsc"
+                          ? `${Number(balance).toFixed(3)} BNB`
+                          : "0"}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        id="amount"
+                        type="number"
+                        className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                      />
+                      <Button
+                        onClick={async () => {
+                          const balance = await maxBalance();
+                          setAmount(balance.toFixed(3));
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 h-10 border-zinc-300 dark:border-zinc-800 hover:border-pink-500 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 transition-all duration-200"
+                      >
+                        MAX
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-6 pt-2">
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <Label
+                          htmlFor="gas-price"
+                          className="text-zinc-700 dark:text-zinc-300"
+                        >
+                          Gas (Gwei)
+                        </Label>
+                        <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
+                          {gasPrice}
+                        </span>
+                      </div>
+                      <div className="relative pt-1">
+                        <div className="flex mb-2 items-center justify-between">
+                          <div>
+                            <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
+                              Slow
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
+                              Fast
+                            </span>
+                          </div>
+                        </div>
+                        <Slider
+                          id="gas-price"
+                          min={5}
+                          max={100}
+                          step={1}
+                          value={[gasPrice]}
+                          onValueChange={(value) => setGasPrice(value[0])}
+                          className="[&>span]:bg-pink-500"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <Label
+                          htmlFor="slippage"
+                          className="text-zinc-700 dark:text-zinc-300"
+                        >
+                          Slippage %
+                        </Label>
+                        <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
+                          {slippage}%
+                        </span>
+                      </div>
+                      <div className="relative pt-1">
+                        <div className="flex mb-2 items-center justify-between">
+                          <div>
+                            <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
+                              Low
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
+                              High
+                            </span>
+                          </div>
+                        </div>
+                        <Slider
+                          id="slippage"
+                          min={1}
+                          max={50}
+                          step={1}
+                          value={[slippage]}
+                          onValueChange={(value) => setSlippage(value[0])}
+                          className="[&>span]:bg-pink-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex-col gap-3">
+                  {!selectedWallet && (
+                    <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-100/30 dark:bg-amber-900/20 p-3 rounded-md mb-2">
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                      <span>Private key required for transactions</span>
+                    </div>
+                  )}
+
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
                     <Button
-                      variant="outline"
-                      size="icon"
-                      className="shrink-0 border-zinc-300 dark:border-zinc-800 hover:border-pink-500 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 transition-all duration-200"
-                      onClick={() => fetchTokenInfo(targetTokenAddress)}
+                      className="w-200 bg-gradient-to-r text-white from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 shadow-lg shadow-pink-900/20 transition-all duration-200"
+                      // onClick={handleMonitoring}
+                      // disabled={targetTokenAddress.trim() === "" || !amount}
                     >
-                      <RefreshCw className="h-4 w-4 text-pink-500 dark:text-pink-400" />
+                      <motion.div
+                        animate={{
+                          scale: [1, 1.2, 1],
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Number.POSITIVE_INFINITY,
+                          repeatType: "loop",
+                        }}
+                        className="mr-2"
+                      >
+                        <Zap className="h-4 w-4" />
+                      </motion.div>
+                      {activeTabString === "Buy" ? "Buy" : "Sell"} Now
+                    </Button>
+                  </motion.div>
+                </CardFooter>
+              </Card>
+              {/* //////////////////// END /////////////////////////// */}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* ==>> Target token section  */}
+              <Card className="col-span-1 bg-white/60 dark:bg-black/60 backdrop-blur-sm border-zinc-200/50 dark:border-zinc-800/50 shadow-xl shadow-pink-900/10 overflow-hidden">
+                <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent opacity-50"></div>
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-xl">
+                        <Target className="h-5 w-5 text-pink-500" />
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
+                          Pre-Launch Snipe
+                        </span>
+                      </CardTitle>
+                      <CardDescription>
+                        Set the token you want to snipe
+                      </CardDescription>
+                    </div>
+                    <Button
+                      onClick={() => setIsTradeModal(true)}
+                      variant="default"
+                      className="w-100 bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 text-white shadow-lg shadow-pink-900/20 transition-all duration-200"
+                    >
+                      Go to Trade
                     </Button>
                   </div>
-                </div>
-                {showTokenInfo && tokenInfo && (
-                  <motion.div
-                    className="bg-gray-100/70 dark:bg-zinc-900/70 rounded-lg p-4 border border-zinc-200/50 dark:border-zinc-800/50 space-y-3"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <motion.div
-                          className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 flex items-center justify-center text-white font-bold"
-                          initial={{ rotate: -10 }}
-                          animate={{ rotate: 0 }}
-                          transition={{ duration: 0.5, type: "spring" }}
-                        >
-                          {tokenInfo.symbol.charAt(0)}
-                        </motion.div>
-                        <div>
-                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                            {tokenInfo.symbol}
-                          </p>
-                        </div>
-                      </div>
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ duration: 0.3, delay: 0.2 }}
-                      >
-                        <Badge
-                          variant="outline"
-                          className="bg-green-100/50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
-                        >
-                          <Check className="h-3 w-3 mr-1" />
-                          {tokenInfo.isVerfied ? "Verified" : "Unverified"}
-                        </Badge>
-                      </motion.div>
-                    </div>
-
-                    <Separator className="bg-zinc-200 dark:bg-zinc-800" />
-
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      {[
-                        { label: "Decimals", value: tokenInfo.decimals },
-                        {
-                          label: "Total Supply",
-                          value: tokenInfo.totalSupply,
-                        },
-                        {
-                          label: "Owner %",
-                          value: tokenInfo.ownerHoldingsPercent,
-                        },
-                        { label: "Holders", value: tokenInfo.holders },
-                        { label: "Buy Tax", value: tokenInfo.buyTax },
-                        { label: "Sell Tax", value: tokenInfo.sellTax },
-                      ].map((item, index) => (
-                        <motion.div
-                          key={item.label}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{
-                            duration: 0.3,
-                            delay: 0.1 + index * 0.05,
-                          }}
-                        >
-                          <p className="text-zinc-500 dark:text-zinc-400">
-                            {item.label}
-                          </p>
-                          <p className="font-medium text-zinc-900 dark:text-white">
-                            {item.value}
-                          </p>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                <div className="pt-2">
-                  <div className="flex justify-between mb-2">
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="space-y-2">
                     <Label
-                      htmlFor="amount"
+                      htmlFor="token-address"
                       className="text-zinc-700 dark:text-zinc-300"
                     >
-                      {selectedChain.id === "ethereum" ||
-                      selectedChain.id === "base"
-                        ? "ETH"
-                        : selectedChain.id === "tron"
-                        ? "TRX"
-                        : selectedChain.id === "solana"
-                        ? "SOL"
-                        : selectedChain.id === "bsc"
-                        ? "BNB"
-                        : "Token"}{" "}
-                      Amount
+                      {selectedChain.name} Token Contract Address
                     </Label>
-                    <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
-                      Balance:{" "}
-                      {selectedChain.id === "ethereum" ||
-                      selectedChain.id === "base"
-                        ? `${Number(balance).toFixed(3)} ETH`
-                        : selectedChain.id === "tron"
-                        ? "1000 TRX"
-                        : selectedChain.id === "solana"
-                        ? "15.2 SOL"
-                        : selectedChain.id === "bsc"
-                        ? `${Number(balance).toFixed(3)} BNB`
-                        : "0"}
-                    </span>
+                    <div className="flex gap-2">
+                      <Input
+                        id="token-address"
+                        placeholder="0x..."
+                        className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200"
+                        value={targetTokenAddress}
+                        onChange={(e) => {
+                          handleTokenInfo(e);
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="shrink-0 border-zinc-300 dark:border-zinc-800 hover:border-pink-500 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 transition-all duration-200"
+                        onClick={() => fetchTokenInfo(targetTokenAddress)}
+                      >
+                        <RefreshCw className="h-4 w-4 text-pink-500 dark:text-pink-400" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 items-center">
-                    <Input
-                      id="amount"
-                      type="number"
-                      className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                    />
-                    <Button
-                      onClick={async () => {
-                        const balance = await maxBalance();
-                        setAmount(balance.toFixed(3));
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className="shrink-0 h-10 border-zinc-300 dark:border-zinc-800 hover:border-pink-500 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 transition-all duration-200"
+                  {showTokenInfo && tokenInfo && (
+                    <motion.div
+                      className="bg-gray-100/70 dark:bg-zinc-900/70 rounded-lg p-4 border border-zinc-200/50 dark:border-zinc-800/50 space-y-3"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3 }}
                     >
-                      MAX
-                    </Button>
-                  </div>
-                </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <motion.div
+                            className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 flex items-center justify-center text-white font-bold"
+                            initial={{ rotate: -10 }}
+                            animate={{ rotate: 0 }}
+                            transition={{ duration: 0.5, type: "spring" }}
+                          >
+                            {tokenInfo.symbol.charAt(0)}
+                          </motion.div>
+                          <div>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                              {tokenInfo.symbol}
+                            </p>
+                          </div>
+                        </div>
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.3, delay: 0.2 }}
+                        >
+                          <Badge
+                            variant="outline"
+                            className="bg-green-100/50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            {tokenInfo.isVerfied ? "Verified" : "Unverified"}
+                          </Badge>
+                        </motion.div>
+                      </div>
 
-                <div className="grid grid-cols-2 gap-6 pt-2">
-                  <div>
+                      <Separator className="bg-zinc-200 dark:bg-zinc-800" />
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        {[
+                          { label: "Decimals", value: tokenInfo.decimals },
+                          {
+                            label: "Total Supply",
+                            value: tokenInfo.totalSupply,
+                          },
+                          {
+                            label: "Owner %",
+                            value: tokenInfo.ownerHoldingsPercent,
+                          },
+                          { label: "Holders", value: tokenInfo.holders },
+                          { label: "Buy Tax", value: tokenInfo.buyTax },
+                          { label: "Sell Tax", value: tokenInfo.sellTax },
+                        ].map((item, index) => (
+                          <motion.div
+                            key={item.label}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{
+                              duration: 0.3,
+                              delay: 0.1 + index * 0.05,
+                            }}
+                          >
+                            <p className="text-zinc-500 dark:text-zinc-400">
+                              {item.label}
+                            </p>
+                            <p className="font-medium text-zinc-900 dark:text-white">
+                              {item.value}
+                            </p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <div className="pt-2">
                     <div className="flex justify-between mb-2">
                       <Label
-                        htmlFor="gas-price"
+                        htmlFor="amount"
                         className="text-zinc-700 dark:text-zinc-300"
                       >
-                        Gas (Gwei)
+                        {selectedChain.id === "ethereum" ||
+                        selectedChain.id === "base"
+                          ? "ETH"
+                          : selectedChain.id === "tron"
+                          ? "TRX"
+                          : selectedChain.id === "solana"
+                          ? "SOL"
+                          : selectedChain.id === "bsc"
+                          ? "BNB"
+                          : "Token"}{" "}
+                        Amount
                       </Label>
                       <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
-                        {gasPrice}
+                        Balance:{" "}
+                        {selectedChain.id === "ethereum" ||
+                        selectedChain.id === "base"
+                          ? `${Number(balance).toFixed(3)} ETH`
+                          : selectedChain.id === "tron"
+                          ? "1000 TRX"
+                          : selectedChain.id === "solana"
+                          ? "15.2 SOL"
+                          : selectedChain.id === "bsc"
+                          ? `${Number(balance).toFixed(3)} BNB`
+                          : "0"}
                       </span>
                     </div>
-                    <div className="relative pt-1">
-                      <div className="flex mb-2 items-center justify-between">
-                        <div>
-                          <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
-                            Slow
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
-                            Fast
-                          </span>
-                        </div>
-                      </div>
-                      <Slider
-                        id="gas-price"
-                        min={5}
-                        max={100}
-                        step={1}
-                        value={[gasPrice]}
-                        onValueChange={(value) => setGasPrice(value[0])}
-                        className="[&>span]:bg-pink-500"
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        id="amount"
+                        type="number"
+                        className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
                       />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <Label
-                        htmlFor="slippage"
-                        className="text-zinc-700 dark:text-zinc-300"
+                      <Button
+                        onClick={async () => {
+                          const balance = await maxBalance();
+                          setAmount(balance.toFixed(3));
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 h-10 border-zinc-300 dark:border-zinc-800 hover:border-pink-500 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 transition-all duration-200"
                       >
-                        Slippage %
-                      </Label>
-                      <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
-                        {slippage}%
-                      </span>
-                    </div>
-                    <div className="relative pt-1">
-                      <div className="flex mb-2 items-center justify-between">
-                        <div>
-                          <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
-                            Low
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
-                            High
-                          </span>
-                        </div>
-                      </div>
-                      <Slider
-                        id="slippage"
-                        min={1}
-                        max={50}
-                        step={1}
-                        value={[slippage]}
-                        onValueChange={(value) => setSlippage(value[0])}
-                        className="[&>span]:bg-pink-500"
-                      />
+                        MAX
+                      </Button>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex-col gap-3">
-                {!selectedWallet && (
-                  <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-100/30 dark:bg-amber-900/20 p-3 rounded-md mb-2">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                    <span>Private key required for sniping transactions</span>
-                  </div>
-                )}
 
-                {/* {monitoring ? (
+                  <div className="grid grid-cols-2 gap-6 pt-2">
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <Label
+                          htmlFor="gas-price"
+                          className="text-zinc-700 dark:text-zinc-300"
+                        >
+                          Gas (Gwei)
+                        </Label>
+                        <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
+                          {gasPrice}
+                        </span>
+                      </div>
+                      <div className="relative pt-1">
+                        <div className="flex mb-2 items-center justify-between">
+                          <div>
+                            <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
+                              Slow
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
+                              Fast
+                            </span>
+                          </div>
+                        </div>
+                        <Slider
+                          id="gas-price"
+                          min={5}
+                          max={100}
+                          step={1}
+                          value={[gasPrice]}
+                          onValueChange={(value) => setGasPrice(value[0])}
+                          className="[&>span]:bg-pink-500"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-2">
+                        <Label
+                          htmlFor="slippage"
+                          className="text-zinc-700 dark:text-zinc-300"
+                        >
+                          Slippage %
+                        </Label>
+                        <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
+                          {slippage}%
+                        </span>
+                      </div>
+                      <div className="relative pt-1">
+                        <div className="flex mb-2 items-center justify-between">
+                          <div>
+                            <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
+                              Low
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-pink-600 bg-pink-200 dark:text-pink-200 dark:bg-pink-900/50">
+                              High
+                            </span>
+                          </div>
+                        </div>
+                        <Slider
+                          id="slippage"
+                          min={1}
+                          max={50}
+                          step={1}
+                          value={[slippage]}
+                          onValueChange={(value) => setSlippage(value[0])}
+                          className="[&>span]:bg-pink-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex-col gap-3">
+                  {!selectedWallet && (
+                    <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-100/30 dark:bg-amber-900/20 p-3 rounded-md mb-2">
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                      <span>Private key required for sniping transactions</span>
+                    </div>
+                  )}
+
+                  {/* {monitoring ? (
                   <Button
                     variant="destructive"
                     className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-900/20 transition-all duration-200"
@@ -1388,14 +1636,14 @@ export default function TokenSniper() {
                     </Button>
                   </motion.div>
                 )} */}
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {/* <Button
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {/* <Button
                     variant="outline"
                     className="w-full border-pink-400/50 dark:border-pink-500/50 bg-white/50 dark:bg-black/50 backdrop-blur-sm text-pink-500 dark:text-pink-400 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 hover:text-pink-600 dark:hover:text-pink-300 transition-all duration-200"
-                    onClick={handleBuyNow}
+                    onClick={handleMonitoring}
                     disabled={targetTokenAddress.trim() === "" || !amount}
                   >
                     <motion.div
@@ -1413,126 +1661,127 @@ export default function TokenSniper() {
                     </motion.div>
                     Buy Now
                   </Button> */}
-                  <Button
-                    className="w-full bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 shadow-lg shadow-pink-900/20 transition-all duration-200"
-                    onClick={handleBuyNow}
-                    disabled={targetTokenAddress.trim() === "" || !amount}
-                  >
-                    <motion.div
-                      animate={{
-                        scale: [1, 1.2, 1],
-                      }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Number.POSITIVE_INFINITY,
-                        repeatType: "loop",
-                      }}
-                      className="mr-2"
+                    <Button
+                      className="w-full bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 shadow-lg shadow-pink-900/20 transition-all duration-200"
+                      onClick={handleMonitoring}
+                      disabled={targetTokenAddress.trim() === "" || !amount}
                     >
-                      <Eye className="h-4 w-4" />
-                    </motion.div>
-                    Start Monitoring
-                  </Button>
-                </motion.div>
-              </CardFooter>
-            </Card>
-            {/* //////////////////// END /////////////////////////// */}
+                      <motion.div
+                        animate={{
+                          scale: [1, 1.2, 1],
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Number.POSITIVE_INFINITY,
+                          repeatType: "loop",
+                        }}
+                        className="mr-2"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </motion.div>
+                      Start Monitoring
+                    </Button>
+                  </motion.div>
+                </CardFooter>
+              </Card>
+              {/* //////////////////// END /////////////////////////// */}
 
-            <Card className="col-span-1 lg:col-span-2 bg-white/60 dark:bg-black/60 backdrop-blur-sm border-zinc-200/50 dark:border-zinc-800/50 shadow-xl shadow-pink-900/10 overflow-hidden">
-              <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent opacity-50"></div>
-              <Tabs defaultValue="monitor">
-                <CardHeader className="pb-0">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                    <CardTitle className="text-xl bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
-                      Token Sniper Dashboard
-                    </CardTitle>
-                    <TabsList className="bg-gray-100/70 dark:bg-zinc-900/70 p-1 sm:self-auto">
-                      <TabsTrigger
-                        value="monitor"
-                        className="data-[state=active]:bg-pink-500 data-[state=active]:text-white transition-all duration-200"
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Monitor
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="settings"
-                        className="data-[state=active]:bg-pink-500 data-[state=active]:text-white transition-all duration-200"
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Settings
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="history"
-                        className="data-[state=active]:bg-pink-500 data-[state=active]:text-white transition-all duration-200"
-                        onClick={handleHistoryData}
-                      >
-                        <Clock className="h-4 w-4 mr-2" />
-                        History
-                      </TabsTrigger>
-                    </TabsList>
-                  </div>
-                  <CardDescription>
-                    Monitor and snipe tokens on {selectedChain.name}
-                  </CardDescription>
-                </CardHeader>
+              {/* ==>> Token Sinper Dashboard section  */}
+              <Card className="col-span-1 lg:col-span-2 bg-white/60 dark:bg-black/60 backdrop-blur-sm border-zinc-200/50 dark:border-zinc-800/50 shadow-xl shadow-pink-900/10 overflow-hidden">
+                <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent opacity-50"></div>
+                <Tabs defaultValue="monitor">
+                  <CardHeader className="pb-0">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                      <CardTitle className="text-xl bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
+                        Token Sniper Dashboard
+                      </CardTitle>
+                      <TabsList className="bg-gray-100/70 dark:bg-zinc-900/70 p-1 sm:self-auto">
+                        <TabsTrigger
+                          value="monitor"
+                          className="data-[state=active]:bg-pink-500 data-[state=active]:text-white transition-all duration-200"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Monitor
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="settings"
+                          className="data-[state=active]:bg-pink-500 data-[state=active]:text-white transition-all duration-200"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Settings
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="history"
+                          className="data-[state=active]:bg-pink-500 data-[state=active]:text-white transition-all duration-200"
+                          onClick={handleHistoryData}
+                        >
+                          <Clock className="h-4 w-4 mr-2" />
+                          History
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
+                    <CardDescription>
+                      Monitor and snipe tokens on {selectedChain.name}
+                    </CardDescription>
+                  </CardHeader>
 
-                <CardContent className="pt-6">
-                  {/* ==>> Monitoring table section   */}
-                  <TabsContent value="monitor" className="m-0">
-                    <div className="space-y-4 overflow-x-auto">
-                      <div className="min-w-[640px] bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg overflow-hidden">
-                        <div className="grid grid-cols-7 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-gray-100/40 dark:bg-black/40">
-                          <div>Token</div>
-                          <div>Wallet</div>
-                          <div>Amount</div>
-                          <div>Gas Fee</div>
-                          <div>Slippage(%)</div>
-                          <div>Status</div>
-                          <div>Time</div>
-                        </div>
-                        {monitorTableData && monitorTableData.length > 0 ? (
-                          monitorTableData?.map((item: HistoryData, i) => (
-                            <div
-                              className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50"
-                              key={i}
-                            >
-                              <div className="grid grid-cols-7 gap-4 p-4 items-center hover:bg-gray-100/30 dark:hover:bg-zinc-900/30 transition-colors duration-200">
-                                <div className="truncate text-pink-500 dark:text-pink-400">
-                                  {shortenAddress(item.tokenAddress)}
-                                </div>
-                                <div className="truncate text-pink-500 dark:text-pink-400">
-                                  {shortenAddress(item.wallet.publicKey)}
-                                </div>
-                                <div>{item.buyAmount} ETH</div>
-                                <div>{item.gasFee}</div>
-                                <div>{item.slippage}%</div>
-                                <div>
-                                  {item.status ? (
-                                    <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
-                                      <Check className="h-4 w-4" /> Success
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
-                                      <X className="h-4 w-4" /> Failed
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                                  {formatTimestamp(item.createdAt)}
+                  <CardContent className="pt-6">
+                    {/* ==>> Monitoring table section   */}
+                    <TabsContent value="monitor" className="m-0">
+                      <div className="space-y-4 overflow-x-auto">
+                        <div className="min-w-[640px] bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg overflow-hidden">
+                          <div className="grid grid-cols-7 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-gray-100/40 dark:bg-black/40">
+                            <div>Token</div>
+                            <div>Wallet</div>
+                            <div>Amount</div>
+                            <div>Gas Fee</div>
+                            <div>Slippage(%)</div>
+                            <div>Status</div>
+                            <div>Time</div>
+                          </div>
+                          {monitorTableData && monitorTableData.length > 0 ? (
+                            monitorTableData?.map((item: HistoryData, i) => (
+                              <div
+                                className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50"
+                                key={i}
+                              >
+                                <div className="grid grid-cols-7 gap-4 p-4 items-center hover:bg-gray-100/30 dark:hover:bg-zinc-900/30 transition-colors duration-200">
+                                  <div className="truncate text-pink-500 dark:text-pink-400">
+                                    {shortenAddress(item.tokenAddress)}
+                                  </div>
+                                  <div className="truncate text-pink-500 dark:text-pink-400">
+                                    {shortenAddress(item.wallet.publicKey)}
+                                  </div>
+                                  <div>{item.buyAmount} ETH</div>
+                                  <div>{item.gasFee}</div>
+                                  <div>{item.slippage}%</div>
+                                  <div>
+                                    {item.status ? (
+                                      <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
+                                        <Check className="h-4 w-4" /> Success
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
+                                        <X className="h-4 w-4" /> Failed
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                                    {formatTimestamp(item.createdAt)}
+                                  </div>
                                 </div>
                               </div>
+                            ))
+                          ) : (
+                            <div className="flex items-center justify-center h-32">
+                              <span className="text-zinc-500 dark:text-zinc-400 text-center text-md">
+                                No data to display.
+                              </span>
                             </div>
-                          ))
-                        ) : (
-                          <div className="flex items-center justify-center h-32">
-                            <span className="text-zinc-500 dark:text-zinc-400 text-center text-md">
-                              No data to display.
-                            </span>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {/* {monitoring ? (
+                      {/* {monitoring ? (
                       <div className="space-y-6">
                         {showTokenInfo && tokenInfo && (
                           <div className="bg-gradient-to-r from-gray-100 to-white dark:from-zinc-900 dark:to-black p-4 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg mb-6">
@@ -1862,195 +2111,196 @@ export default function TokenSniper() {
                         </motion.div>
                       </motion.div>
                     )} */}
-                  </TabsContent>
-                  {/* //////////////////// END /////////////////////////// */}
+                    </TabsContent>
+                    {/* //////////////////// END /////////////////////////// */}
 
-                  {/* ==>> Settings tab section   */}
-                  <TabsContent value="settings" className="m-0">
-                    <div className="space-y-8">
-                      <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black p-5 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
-                          <Shield className="h-5 w-5 text-pink-500" />
-                          Auto-Sell Settings
-                        </h3>
-                        <div className="space-y-5">
-                          <div className="flex items-center justify-between p-3 bg-gray-100/50 dark:bg-zinc-900/50 rounded-lg">
-                            <div className="space-y-0.5">
-                              <Label
-                                htmlFor="auto-sell"
-                                className="text-zinc-900 dark:text-white font-medium"
-                              >
-                                Auto-Sell
-                              </Label>
-                              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                Automatically sell based on profit/loss targets
-                              </p>
-                            </div>
-                            <Switch
-                              id="auto-sell"
-                              checked={settings.autoSell}
-                              onCheckedChange={(checked) =>
-                                handleChange("autoSell", checked)
-                              }
-                              className="data-[state=checked]:bg-pink-500"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-gray-100/30 dark:bg-zinc-900/30 p-4 rounded-lg">
-                              <div className="flex justify-between mb-2">
-                                <Label
-                                  htmlFor="stop-loss"
-                                  className="text-zinc-700 dark:text-zinc-300"
-                                >
-                                  Stop Loss %
-                                </Label>
-                                <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
-                                  {settings.stopLoss}%
-                                </span>
-                              </div>
-                              <Slider
-                                id="stop-loss"
-                                min={10}
-                                max={90}
-                                step={5}
-                                value={[settings.stopLoss]}
-                                onValueChange={(value) =>
-                                  handleChange("stopLoss", value[0])
-                                }
-                                disabled={!settings.autoSell}
-                                className="[&>span]:bg-red-500"
-                              />
-                              <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
-                                Sell automatically if token drops below{" "}
-                                {settings.stopLoss}% of purchase price
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black p-4 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-bold flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
-                            <Rocket className="h-5 w-5 text-pink-500" />
-                            Multi-Level Profit Taking
+                    {/* ==>> Settings tab section   */}
+                    <TabsContent value="settings" className="m-0">
+                      <div className="space-y-8">
+                        <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black p-5 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
+                          <h3 className="text-lg font-bold mb-4 flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
+                            <Shield className="h-5 w-5 text-pink-500" />
+                            Auto-Sell Settings
                           </h3>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
+                          <div className="space-y-5">
+                            <div className="flex items-center justify-between p-3 bg-gray-100/50 dark:bg-zinc-900/50 rounded-lg">
+                              <div className="space-y-0.5">
+                                <Label
+                                  htmlFor="auto-sell"
+                                  className="text-zinc-900 dark:text-white font-medium"
                                 >
-                                  <Info className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent className="bg-white/95 dark:bg-black/95 backdrop-blur-md border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white shadow-xl shadow-pink-900/20">
-                                <p className="max-w-xs">
-                                  Set multiple profit targets to automatically
-                                  sell portions of your position at different
-                                  price levels
+                                  Auto-Sell
+                                </Label>
+                                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                                  Automatically sell based on profit/loss
+                                  targets
                                 </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                              </div>
+                              <Switch
+                                id="auto-sell"
+                                checked={settings.autoSell}
+                                onCheckedChange={(checked) =>
+                                  handleChange("autoSell", checked)
+                                }
+                                className="data-[state=checked]:bg-pink-500"
+                              />
+                            </div>
 
-                        <div className="space-y-4">
-                          {settings.profitLevels.map((level, index) => (
-                            <div
-                              key={index}
-                              className="bg-gradient-to-r from-gray-100/80 to-white/80 dark:from-zinc-900/80 dark:to-black/80 p-3 rounded-lg border border-zinc-200/30 dark:border-zinc-800/30 hover:border-pink-400/20 dark:hover:border-pink-500/20 transition-all duration-200 shadow-md"
-                            >
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-                                <div className="flex items-center gap-2">
-                                  <Switch
-                                    checked={level.enabled}
-                                    onCheckedChange={(checked) =>
-                                      updateProfitLevel(
-                                        index,
-                                        "enabled",
-                                        checked
-                                      )
-                                    }
-                                    disabled={!settings.autoSell}
-                                    className="data-[state=checked]:bg-pink-500"
-                                  />
-                                  <span className="font-medium text-zinc-900 dark:text-white">
-                                    Level {index + 1}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="bg-gray-100/30 dark:bg-zinc-900/30 p-4 rounded-lg">
+                                <div className="flex justify-between mb-2">
+                                  <Label
+                                    htmlFor="stop-loss"
+                                    className="text-zinc-700 dark:text-zinc-300"
+                                  >
+                                    Stop Loss %
+                                  </Label>
+                                  <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
+                                    {settings.stopLoss}%
                                   </span>
                                 </div>
-                                <Badge className="w-fit sm:w-auto bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 text-white border-none shadow-sm shadow-pink-900/20">
-                                  {level.profitTarget}% of position
-                                </Badge>
-                              </div>
-
-                              <div className="flex items-center gap-4">
-                                <div className="flex-1">
-                                  <div className="flex justify-between mb-3">
-                                    <Label
-                                      htmlFor={`profit-${index}`}
-                                      className="text-xs text-zinc-500 dark:text-zinc-400"
-                                    >
-                                      Profit Target
-                                    </Label>
-                                    <span className="text-xs text-pink-500 dark:text-pink-400 font-medium">
-                                      {level.profitTarget}%
-                                    </span>
-                                  </div>
-                                  <Slider
-                                    id={`profit-${index}`}
-                                    min={20}
-                                    max={1000}
-                                    step={10}
-                                    value={[level.profitTarget]}
-                                    onValueChange={(value) =>
-                                      updateProfitLevel(
-                                        index,
-                                        "profitTarget",
-                                        value[0]
-                                      )
-                                    }
-                                    disabled={
-                                      !settings.autoSell || !level.enabled
-                                    }
-                                    className="[&>span]:bg-pink-500"
-                                  />
-                                </div>
-
-                                <div className="w-24">
-                                  <Label
-                                    htmlFor={`percentage-${index}`}
-                                    className="text-xs text-zinc-500 dark:text-zinc-400 block mb-1"
-                                  >
-                                    Sell %
-                                  </Label>
-                                  <Input
-                                    id={`percentage-${index}`}
-                                    type="number"
-                                    className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200 h-8"
-                                    value={level.sellPercentage}
-                                    onChange={(e) =>
-                                      updateProfitLevel(
-                                        index,
-                                        "sellPercentage",
-                                        Number.parseInt(e.target.value) || 0
-                                      )
-                                    }
-                                    disabled={
-                                      !settings.autoSell || !level.enabled
-                                    }
-                                  />
+                                <Slider
+                                  id="stop-loss"
+                                  min={10}
+                                  max={90}
+                                  step={5}
+                                  value={[settings.stopLoss]}
+                                  onValueChange={(value) =>
+                                    handleChange("stopLoss", value[0])
+                                  }
+                                  disabled={!settings.autoSell}
+                                  className="[&>span]:bg-red-500"
+                                />
+                                <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
+                                  Sell automatically if token drops below{" "}
+                                  {settings.stopLoss}% of purchase price
                                 </div>
                               </div>
                             </div>
-                          ))}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black p-5 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
+                        <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black p-4 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
+                              <Rocket className="h-5 w-5 text-pink-500" />
+                              Multi-Level Profit Taking
+                            </h3>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6"
+                                  >
+                                    <Info className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-white/95 dark:bg-black/95 backdrop-blur-md border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white shadow-xl shadow-pink-900/20">
+                                  <p className="max-w-xs">
+                                    Set multiple profit targets to automatically
+                                    sell portions of your position at different
+                                    price levels
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+
+                          <div className="space-y-4">
+                            {settings.profitLevels.map((level, index) => (
+                              <div
+                                key={index}
+                                className="bg-gradient-to-r from-gray-100/80 to-white/80 dark:from-zinc-900/80 dark:to-black/80 p-3 rounded-lg border border-zinc-200/30 dark:border-zinc-800/30 hover:border-pink-400/20 dark:hover:border-pink-500/20 transition-all duration-200 shadow-md"
+                              >
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <Switch
+                                      checked={level.enabled}
+                                      onCheckedChange={(checked) =>
+                                        updateProfitLevel(
+                                          index,
+                                          "enabled",
+                                          checked
+                                        )
+                                      }
+                                      disabled={!settings.autoSell}
+                                      className="data-[state=checked]:bg-pink-500"
+                                    />
+                                    <span className="font-medium text-zinc-900 dark:text-white">
+                                      Level {index + 1}
+                                    </span>
+                                  </div>
+                                  <Badge className="w-fit sm:w-auto bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 text-white border-none shadow-sm shadow-pink-900/20">
+                                    {level.profitTarget}% of position
+                                  </Badge>
+                                </div>
+
+                                <div className="flex items-center gap-4">
+                                  <div className="flex-1">
+                                    <div className="flex justify-between mb-3">
+                                      <Label
+                                        htmlFor={`profit-${index}`}
+                                        className="text-xs text-zinc-500 dark:text-zinc-400"
+                                      >
+                                        Profit Target
+                                      </Label>
+                                      <span className="text-xs text-pink-500 dark:text-pink-400 font-medium">
+                                        {level.profitTarget}%
+                                      </span>
+                                    </div>
+                                    <Slider
+                                      id={`profit-${index}`}
+                                      min={20}
+                                      max={1000}
+                                      step={10}
+                                      value={[level.profitTarget]}
+                                      onValueChange={(value) =>
+                                        updateProfitLevel(
+                                          index,
+                                          "profitTarget",
+                                          value[0]
+                                        )
+                                      }
+                                      disabled={
+                                        !settings.autoSell || !level.enabled
+                                      }
+                                      className="[&>span]:bg-pink-500"
+                                    />
+                                  </div>
+
+                                  <div className="w-24">
+                                    <Label
+                                      htmlFor={`percentage-${index}`}
+                                      className="text-xs text-zinc-500 dark:text-zinc-400 block mb-1"
+                                    >
+                                      Sell %
+                                    </Label>
+                                    <Input
+                                      id={`percentage-${index}`}
+                                      type="number"
+                                      className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200 h-8"
+                                      value={level.sellPercentage}
+                                      onChange={(e) =>
+                                        updateProfitLevel(
+                                          index,
+                                          "sellPercentage",
+                                          Number.parseInt(e.target.value) || 0
+                                        )
+                                      }
+                                      disabled={
+                                        !settings.autoSell || !level.enabled
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black p-5 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
                           <Shield className="h-5 w-5 text-pink-500" />
                           Safety Features
@@ -2134,96 +2384,98 @@ export default function TokenSniper() {
                         </div>
                       </div> */}
 
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Button
-                          variant="outline"
-                          className="w-full border-pink-400/50 dark:border-pink-500/50 bg-white/50 dark:bg-black/50 backdrop-blur-sm text-pink-500 dark:text-pink-400 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 hover:text-pink-600 dark:hover:text-pink-300 transition-all duration-200"
-                          onClick={handleSettingChanges}
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                         >
-                          <motion.div
-                            animate={{
-                              scale: [1, 1.2, 1],
-                            }}
-                            transition={{
-                              duration: 1.5,
-                              repeat: Number.POSITIVE_INFINITY,
-                              repeatType: "loop",
-                            }}
-                            className="mr-2"
+                          <Button
+                            variant="outline"
+                            className="w-full border-pink-400/50 dark:border-pink-500/50 bg-white/50 dark:bg-black/50 backdrop-blur-sm text-pink-500 dark:text-pink-400 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 hover:text-pink-600 dark:hover:text-pink-300 transition-all duration-200"
+                            onClick={handleSettingChanges}
                           >
-                            <Shield className="h-4 w-4" />
-                          </motion.div>
-                          Save Changes
-                        </Button>
-                      </motion.div>
-                    </div>
-                  </TabsContent>
-                  {/* //////////////////// END /////////////////////////// */}
-
-                  {/* ==>> History table section   */}
-                  <TabsContent value="history" className="m-0">
-                    <div className="space-y-4 overflow-x-auto">
-                      <div className="min-w-[640px] bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg overflow-hidden">
-                        <div className="grid grid-cols-7 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-gray-100/40 dark:bg-black/40">
-                          <div>Token</div>
-                          <div>Wallet</div>
-                          <div>Amount</div>
-                          <div>Gas Fee</div>
-                          <div>Slippage(%)</div>
-                          <div>Status</div>
-                          <div>Time</div>
-                        </div>
-                        {historyData && historyData.length > 0 ? (
-                          historyData?.map((item: HistoryData, i) => (
-                            <div
-                              className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50"
-                              key={i}
+                            <motion.div
+                              animate={{
+                                scale: [1, 1.2, 1],
+                              }}
+                              transition={{
+                                duration: 1.5,
+                                repeat: Number.POSITIVE_INFINITY,
+                                repeatType: "loop",
+                              }}
+                              className="mr-2"
                             >
-                              <div className="grid grid-cols-7 gap-4 p-4 items-center hover:bg-gray-100/30 dark:hover:bg-zinc-900/30 transition-colors duration-200">
-                                <div className="truncate text-pink-500 dark:text-pink-400">
-                                  {shortenAddress(item.tokenAddress)}
-                                </div>
-                                <div className="truncate text-pink-500 dark:text-pink-400">
-                                  {shortenAddress(item.wallet.publicKey)}
-                                </div>
-                                <div>{item.buyAmount} ETH</div>
-                                <div>{item.gasFee}</div>
-                                <div>{item.slippage}%</div>
-                                <div>
-                                  {item.status ? (
-                                    <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
-                                      <Check className="h-4 w-4" /> Success
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
-                                      <X className="h-4 w-4" /> Failed
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="text-sm text-zinc-500 dark:text-zinc-400">
-                                  {formatTimestamp(item.createdAt)}
+                              <Shield className="h-4 w-4" />
+                            </motion.div>
+                            Save Changes
+                          </Button>
+                        </motion.div>
+                      </div>
+                    </TabsContent>
+                    {/* //////////////////// END /////////////////////////// */}
+
+                    {/* ==>> History table section   */}
+                    <TabsContent value="history" className="m-0">
+                      <div className="space-y-4 overflow-x-auto">
+                        <div className="min-w-[640px] bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg overflow-hidden">
+                          <div className="grid grid-cols-7 gap-4 p-4 border-b border-zinc-200 dark:border-zinc-800 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-gray-100/40 dark:bg-black/40">
+                            <div>Token</div>
+                            <div>Wallet</div>
+                            <div>Amount</div>
+                            <div>Gas Fee</div>
+                            <div>Slippage(%)</div>
+                            <div>Status</div>
+                            <div>Time</div>
+                          </div>
+                          {historyData && historyData.length > 0 ? (
+                            historyData?.map((item: HistoryData, i) => (
+                              <div
+                                className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50"
+                                key={i}
+                              >
+                                <div className="grid grid-cols-7 gap-4 p-4 items-center hover:bg-gray-100/30 dark:hover:bg-zinc-900/30 transition-colors duration-200">
+                                  <div className="truncate text-pink-500 dark:text-pink-400">
+                                    {shortenAddress(item.tokenAddress)}
+                                  </div>
+                                  <div className="truncate text-pink-500 dark:text-pink-400">
+                                    {shortenAddress(item.wallet.publicKey)}
+                                  </div>
+                                  <div>{item.buyAmount} ETH</div>
+                                  <div>{item.gasFee}</div>
+                                  <div>{item.slippage}%</div>
+                                  <div>
+                                    {item.status ? (
+                                      <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
+                                        <Check className="h-4 w-4" /> Success
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
+                                        <X className="h-4 w-4" /> Failed
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-zinc-500 dark:text-zinc-400">
+                                    {formatTimestamp(item.createdAt)}
+                                  </div>
                                 </div>
                               </div>
+                            ))
+                          ) : (
+                            <div className="flex items-center justify-center h-32">
+                              <span className="text-zinc-500 dark:text-zinc-400 text-center text-md">
+                                No data to display.
+                              </span>
                             </div>
-                          ))
-                        ) : (
-                          <div className="flex items-center justify-center h-32">
-                            <span className="text-zinc-500 dark:text-zinc-400 text-center text-md">
-                              No data to display.
-                            </span>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </TabsContent>
-                  {/* //////////////////// END /////////////////////////// */}
-                </CardContent>
-              </Tabs>
-            </Card>
-          </div>
+                    </TabsContent>
+                    {/* //////////////////// END /////////////////////////// */}
+                  </CardContent>
+                </Tabs>
+              </Card>
+              {/* //////////////////// END /////////////////////////// */}
+            </div>
+          )}
 
           <footer className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-500">
             <p>Sniper v1.0.0 - Use at your own risk. Not financial advice.</p>
