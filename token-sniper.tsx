@@ -1071,7 +1071,7 @@ export default function TokenSniper() {
   }, [selectedWallet?.publicKey]);
 
   const maxTradeBalance = useCallback(async () => {
-    if (!account) return showToast("Connect Wallet First");
+    if (!account) return;
     const selectedChainId =
       selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
 
