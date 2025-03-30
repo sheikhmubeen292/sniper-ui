@@ -1,7 +1,7 @@
 "use client";
 
 import { enqueueSnackbar, VariantType } from "notistack";
-import { mainnet } from "wagmi/chains";
+import { base, bsc, mainnet } from "wagmi/chains";
 import { defaultWagmiConfig } from "@web3modal/wagmi/react/config";
 
 export const projectId = "cba73ada547c01c1a64d7725fb732495";
@@ -14,7 +14,7 @@ const metadata = {
   icons: ["https://avatars.githubusercontent.com/u/37784886"],
 };
 
-const chains = [mainnet] as const;
+const chains = [mainnet, bsc, base] as const;
 
 export const config = defaultWagmiConfig({
   chains,

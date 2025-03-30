@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useEffect, ChangeEvent, useCallback } from "react";
+import { useState, useEffect, ChangeEvent, useCallback, useMemo } from "react";
 import { useWeb3Modal } from "@web3modal/wagmi/react";
 import { getBalance, GetBalanceReturnType } from "@wagmi/core";
 import { getL1TokenBalance } from "viem/zksync";
-import { formatEther, isAddress } from "viem";
+import {
+  formatEther,
+  formatUnits,
+  isAddress,
+  parseEther,
+  parseUnits,
+} from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -75,7 +81,14 @@ import { ThemeProvider } from "./theme-provider";
 import { ThemeToggle } from "./theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
-import { useAuth } from "./utils/constant";
+import {
+  BASE_CHAIN_ID,
+  BSC_CHAIN_ID,
+  Eth_Address,
+  ETH_CHAIN_ID,
+  NULL_ADDRESS,
+  useAuth,
+} from "./utils/constant";
 import {
   activeSelectedWallet,
   createSniper,
@@ -90,6 +103,15 @@ import {
 } from "./utils/apiHandler";
 import { config, showToast } from "./utils/config";
 import { Address } from "./types/general.types";
+import { getExactDecimals } from "./utils/decimal";
+import {
+  factoryReadContract,
+  routerAddress,
+  routerReadContract,
+  routerWriteContract,
+  tokenReadContract,
+  tokenWriteContract,
+} from "./contracts";
 
 interface Wallet {
   _id: string;
@@ -298,6 +320,151 @@ const GenerateWalletDialog = ({
     </Dialog>
   );
 };
+
+// Replace the existing renderMiniChart function with this enhanced animated version
+// const renderMiniChart = (data) => {
+//   const max = Math.max(...data);
+//   const min = Math.min(...data);
+//   const range = max - min;
+
+//   return (
+//     <div className="h-12 flex items-end space-x-[2px]">
+//       {data.map((value, index) => {
+//         const height = ((value - min) / range) * 100;
+//         const isPositive = index > 0 ? value >= data[index - 1] : true;
+//         return (
+//           <motion.div
+//             key={index}
+//             className={`w-[3px] ${
+//               isPositive ? "bg-pink-500" : "bg-pink-700"
+//             } dark:${isPositive ? "bg-pink-400" : "bg-pink-600"} rounded-t-sm`}
+//             initial={{ height: 0 }}
+//             animate={{ height: `${height}%` }}
+//             transition={{ duration: 0.5, delay: index * 0.02 }}
+//           />
+//         );
+//       })}
+//     </div>
+//   );
+// };
+
+// Add this function after the renderMiniChart function
+const FloatingParticle = ({ size, color, delay, duration, left }) => {
+  return (
+    <motion.div
+      className={`absolute rounded-full ${color} opacity-20 pointer-events-none`}
+      style={{
+        width: size,
+        height: size,
+        left: `${left}%`,
+      }}
+      initial={{ y: "110vh", opacity: 0 }}
+      animate={{
+        y: "-10vh",
+        opacity: [0, 0.2, 0.1, 0.2, 0],
+        x: [0, 10, -10, 15, -5, 0],
+      }}
+      transition={{
+        duration: duration,
+        delay: delay,
+        repeat: Number.POSITIVE_INFINITY,
+        repeatType: "loop",
+      }}
+    />
+  );
+};
+
+// Add this component after the FloatingParticle component
+const BackgroundParticles = () => {
+  return (
+    <div className="absolute inset-0 overflow-hidden z-0 opacity-40">
+      <FloatingParticle
+        size="20px"
+        color="bg-pink-400"
+        delay={0}
+        duration={15}
+        left={10}
+      />
+      <FloatingParticle
+        size="30px"
+        color="bg-pink-500"
+        delay={2}
+        duration={20}
+        left={20}
+      />
+      <FloatingParticle
+        size="15px"
+        color="bg-pink-300"
+        delay={5}
+        duration={18}
+        left={30}
+      />
+      <FloatingParticle
+        size="25px"
+        color="bg-pink-600"
+        delay={7}
+        duration={25}
+        left={40}
+      />
+      <FloatingParticle
+        size="18px"
+        color="bg-pink-400"
+        delay={10}
+        duration={22}
+        left={50}
+      />
+      <FloatingParticle
+        size="22px"
+        color="bg-pink-500"
+        delay={3}
+        duration={19}
+        left={60}
+      />
+      <FloatingParticle
+        size="28px"
+        color="bg-pink-300"
+        delay={8}
+        duration={23}
+        left={70}
+      />
+      <FloatingParticle
+        size="16px"
+        color="bg-pink-600"
+        delay={12}
+        duration={17}
+        left={80}
+      />
+      <FloatingParticle
+        size="24px"
+        color="bg-pink-400"
+        delay={6}
+        duration={21}
+        left={90}
+      />
+    </div>
+  );
+};
+
+const chains = [
+  { id: "ethereum", name: "Ethereum", icon: DollarSign, color: "pink" },
+  { id: "base", name: "Base", icon: BarChart3, color: "blue" },
+  { id: "bsc", name: "BSC", icon: Zap, color: "yellow" },
+  // { id: "tron", name: "Tron", icon: Zap, color: "red" },
+  // { id: "solana", name: "Solana", icon: Sun, color: "purple" },
+];
+
+export type Chain_Type = {
+  bsc: typeof BSC_CHAIN_ID;
+  ethereum: typeof ETH_CHAIN_ID;
+  base: typeof BASE_CHAIN_ID;
+};
+
+const currentChainId: Chain_Type = {
+  bsc: 56,
+  base: 8453,
+  ethereum: 1,
+};
+
 ////////////////////////////////////////////
 
 export default function TokenSniper() {
@@ -336,10 +503,9 @@ export default function TokenSniper() {
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [showTokenInfo, setShowTokenInfo] = useState(false);
   const [isTradeModal, setIsTradeModal] = useState(false);
-  const [activeTabString, setActiveTabString] = useState("Buy");
-  const [tradeTokenAddress, setTradeTokenAddress] = useState("");
+  const [isBuy, setIsBuy] = useState(true);
   const [tradeAmount, setTradeAmount] = useState("");
-  const [tradeGasPrice, setTradeGasPrice] = useState(25);
+  const [tradeGasPrice, setTradeGasPrice] = useState(35);
   const [tradeSlippage, setTradeSlippage] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState({
@@ -357,6 +523,11 @@ export default function TokenSniper() {
       multiWalletSniping: false,
     },
   });
+  const [trade, setTrade] = useState({
+    amountIn: "",
+    amountOut: "",
+    isPairExist: false,
+  });
 
   const [progress, setProgress] = useState(0);
   const [chartData, setChartData] = useState([]);
@@ -368,13 +539,227 @@ export default function TokenSniper() {
   // const [buyAmountType, setBuyAmountType] = useState("percent"); // "percent" or "fixed"
   // const [showPrivateKey, setShowPrivateKey] = useState(false);
 
-  const chains = [
-    { id: "ethereum", name: "Ethereum", icon: DollarSign, color: "pink" },
-    { id: "base", name: "Base", icon: BarChart3, color: "blue" },
-    { id: "bsc", name: "BSC", icon: Zap, color: "yellow" },
-    // { id: "tron", name: "Tron", icon: Zap, color: "red" },
-    // { id: "solana", name: "Solana", icon: Sun, color: "purple" },
-  ];
+  const selectedChainId = useMemo(() => {
+    const selectedChainId =
+      selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
+    return selectedChainId;
+  }, [selectedChain.id]);
+
+  const getAmountsOutput = useCallback(
+    async (amount: string) => {
+      try {
+        const getAmountsOut: any = await routerReadContract(
+          selectedChainId,
+          "getAmountsOut",
+          [
+            parseUnits(
+              amount === "" ? "1" : amount.toString(),
+              isBuy ? 18 : Number(tokenInfo?.decimals) || 18
+            ),
+            isBuy
+              ? [Eth_Address[selectedChainId], targetTokenAddress]
+              : [targetTokenAddress, Eth_Address[selectedChainId]],
+          ]
+        );
+
+        return Number(
+          formatUnits(
+            getAmountsOut[1].toString(),
+            isBuy ? Number(tokenInfo?.decimals) || 18 : 18
+          )
+        );
+      } catch (e) {
+        console.log(e);
+      }
+    },
+    [tokenInfo?.decimals, targetTokenAddress, isBuy]
+  );
+
+  const handleAmountIn = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      if (!tokenInfo?.decimals) return showToast("Enter Token Address first");
+
+      if (e.target.value.match(/^[0-9]*[.]?[0-9]*$/)) {
+        setTrade((prev) => ({ ...prev, amountIn: e.target.value }));
+
+        if (Number(e.target.value) > 0) {
+          const returnValue = await getAmountsOutput(e.target.value);
+          setTrade((prev) => ({ ...prev, amountOut: String(returnValue) }));
+        } else if (Number(e.target.value) <= 0) {
+          setTrade((prev) => ({ ...prev, amountOut: "" }));
+        }
+      }
+    },
+    [getAmountsOutput]
+  );
+
+  // const swap = useCallback(async () => {
+  //   try {
+  //     if (!account) return showToast("Connect Wallet");
+  //     if (balance?.token <= 0) return showToast("Balance is less than 0");
+
+  //     const amountOut = Number(amount.token) - Number(amount.token) * 0.08;
+
+  //     const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
+
+  //     const tx = await routerWriteContract(
+  //       "swapExactETHForTokensSupportingFeeOnTransferTokens",
+  //       [
+  //         parseEther(amountOut.toString()),
+  //         [weth, tokenAddress],
+  //         account,
+  //         deadline,
+  //       ],
+  //       parseEther(amount.eth.toString())
+  //     );
+
+  //     console.log(tx, "tx");
+
+  //     showToast("Buy Successful", "success");
+
+  //     setTrx((o) => ({ ...o, isBought: true }));
+
+  //     //   await new Promise((resolve) => setTimeout(resolve, 2000));
+
+  //     await fetchTokenBalance();
+  //   } catch (e) {
+  //     console.log(e);
+  //     showToast(e.shortMessage);
+  //   }
+  // }, [account, amount.eth, amount.token, balance?.token, fetchTokenBalance]);
+
+  // Trade function here
+  const handleBuy = useCallback(async () => {
+    try {
+      if (!account) return showToast("Connect Wallet");
+      if (tradeSectionBalance <= 0) return showToast("Balance is less than 0");
+      if (!tokenInfo?.symbol) return showToast("Refetch Token");
+      if (tradeSectionBalance < Number(trade.amountIn))
+        return showToast("Insufficent Balance");
+
+      setIsLoading(true);
+
+      const amountOut =
+        Number(trade.amountOut) - Number(trade.amountOut) * (slippage / 100);
+
+      const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
+
+      const tx = await routerWriteContract(
+        selectedChainId,
+        "swapExactETHForTokensSupportingFeeOnTransferTokens",
+        [
+          parseUnits(amountOut.toString(), Number(tokenInfo?.decimals)),
+          [Eth_Address[selectedChainId], targetTokenAddress],
+          account,
+          deadline,
+        ],
+        gasPrice,
+        parseEther(trade.amountIn.toString())
+      );
+
+      console.log(tx, "tx");
+
+      showToast("Buy Successful", "success");
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const balance = await maxTradeBalance();
+      setTradeSectionBalance(Number(balance));
+
+      setIsLoading(false);
+    } catch (e: any) {
+      setIsLoading(false);
+      console.log(e);
+      showToast(e.shortMessage);
+    }
+  }, [
+    account,
+    selectedChainId,
+    trade.amountIn,
+    trade.amountOut,
+    tradeSectionBalance,
+    tokenInfo?.symbol,
+    tokenInfo?.decimals,
+    targetTokenAddress,
+  ]);
+
+  const handleSell = useCallback(async () => {
+    try {
+      if (!account) return showToast("Connect Wallet");
+      if (tradeSectionBalance <= 0) return showToast("Balance is less than 0");
+      if (!tokenInfo?.symbol) return showToast("Refetch Token");
+
+      if (tradeSectionBalance < Number(trade.amountIn))
+        return showToast("Insufficent Balance");
+
+      setIsLoading(true);
+
+      const amountOut =
+        Number(trade.amountOut) - Number(trade.amountOut) * (slippage / 100);
+
+      const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
+
+      const allowance = await tokenReadContract(
+        selectedChainId,
+        targetTokenAddress as Address,
+        "allowance",
+        [account, routerAddress[selectedChainId]]
+      );
+
+      if (
+        Number(formatUnits(allowance as bigint, Number(tokenInfo?.decimals))) <
+        Number(trade.amountIn)
+      ) {
+        await tokenWriteContract(
+          selectedChainId,
+          targetTokenAddress as Address,
+          "approve",
+          [
+            routerAddress[selectedChainId],
+            "99999999999999999999999999999999999999",
+          ]
+        );
+      }
+
+      const tx = await routerWriteContract(
+        selectedChainId,
+        "swapExactTokensForETHSupportingFeeOnTransferTokens",
+        [
+          parseUnits(trade.amountIn.toString(), Number(tokenInfo?.decimals)),
+          parseEther(amountOut.toString()),
+          [targetTokenAddress, Eth_Address[selectedChainId]],
+          account,
+          deadline,
+        ],
+        gasPrice
+      );
+
+      console.log(tx, "tx");
+
+      showToast("Buy Successful", "success");
+
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const balance = await maxTradeBalance();
+      setTradeSectionBalance(Number(balance));
+
+      setIsLoading(false);
+    } catch (e: any) {
+      setIsLoading(false);
+      console.log(e);
+      showToast(e.shortMessage);
+    }
+  }, [
+    account,
+    selectedChainId,
+    trade.amountIn,
+    trade.amountOut,
+    tradeSectionBalance,
+    tokenInfo?.symbol,
+    tokenInfo?.decimals,
+    targetTokenAddress,
+  ]);
+  //////////////////////////////////////////
 
   // Simulate progress for monitoring
   useEffect(() => {
@@ -450,28 +835,28 @@ export default function TokenSniper() {
     fetchUserWallets();
   }, [account]);
 
-  const handleConnect = () => {
-    // In a real app, this would validate the private key format
-    if (addWalletPrivateKey.length >= 64) {
-      setConnected(true);
-      if (address.trim().length > 10) {
-        // fetchTokenInfo();
-      }
-    } else {
-      showToast("Please enter a valid private key", "error");
-    }
-  };
+  // const handleConnect = () => {
+  //   // In a real app, this would validate the private key format
+  //   if (addWalletPrivateKey.length >= 64) {
+  //     setConnected(true);
+  //     if (address.trim().length > 10) {
+  //       // fetchTokenInfo();
+  //     }
+  //   } else {
+  //     showToast("Please enter a valid private key", "error");
+  //   }
+  // };
 
-  const handleStartMonitoring = () => {
-    if (address.trim() !== "") {
-      setMonitoring(true);
-      // fetchTokenInfo();
-    }
-  };
+  // const handleStartMonitoring = () => {
+  //   if (address.trim() !== "") {
+  //     setMonitoring(true);
+  //     // fetchTokenInfo();
+  //   }
+  // };
 
-  const handleStopMonitoring = () => {
-    setMonitoring(false);
-  };
+  // const handleStopMonitoring = () => {
+  //   setMonitoring(false);
+  // };
 
   const handleMonitoring = async () => {
     const selectedChainId =
@@ -503,6 +888,8 @@ export default function TokenSniper() {
     if (isAddress(tokenAddress)) {
       const { data } = await getTokenInfo(tokenAddress, selectedChainId);
 
+      console.log(data, "token response data");
+
       if (data) {
         setTokenInfo(data);
         setShowTokenInfo(true);
@@ -514,10 +901,15 @@ export default function TokenSniper() {
   };
 
   const handleTokenInfo = async (e: ChangeEvent<HTMLInputElement>) => {
-    const tokenAddress = e.target.value.trim();
-    setTargetTokenAddress(tokenAddress);
+    try {
+      const tokenAddress = e.target.value.trim();
 
-    await fetchTokenInfo(tokenAddress);
+      setTargetTokenAddress(tokenAddress);
+
+      await fetchTokenInfo(tokenAddress);
+    } catch (e) {
+      console.log(e);
+    }
   };
 
   // Api call of setting section
@@ -636,18 +1028,6 @@ export default function TokenSniper() {
   };
   ////////////////////////////////////////////////////////
 
-  // Trade function here
-  const handleBuy = async () => {
-    if (!selectedWallet || !tradeTokenAddress || !tradeAmount) return;
-    // await executeTrade("buy", selectedWallet, tradeTokenAddress, tradeAmount, tradeGasPrice, tradeSlippage);
-  };
-
-  const handleSell = async () => {
-    if (!selectedWallet || !tradeTokenAddress || !tradeAmount) return;
-    // await executeTrade("sell", selectedWallet, tradeTokenAddress, tradeAmount, tradeGasPrice, tradeSlippage);
-  };
-  //////////////////////////////////////////
-
   // copy to clipbpard address
   const copyToClipboard = (text: string) => {
     navigator.clipboard
@@ -676,132 +1056,6 @@ export default function TokenSniper() {
   }
   ////////////////////////////
 
-  // Replace the existing renderMiniChart function with this enhanced animated version
-  const renderMiniChart = (data) => {
-    const max = Math.max(...data);
-    const min = Math.min(...data);
-    const range = max - min;
-
-    return (
-      <div className="h-12 flex items-end space-x-[2px]">
-        {data.map((value, index) => {
-          const height = ((value - min) / range) * 100;
-          const isPositive = index > 0 ? value >= data[index - 1] : true;
-          return (
-            <motion.div
-              key={index}
-              className={`w-[3px] ${
-                isPositive ? "bg-pink-500" : "bg-pink-700"
-              } dark:${
-                isPositive ? "bg-pink-400" : "bg-pink-600"
-              } rounded-t-sm`}
-              initial={{ height: 0 }}
-              animate={{ height: `${height}%` }}
-              transition={{ duration: 0.5, delay: index * 0.02 }}
-            />
-          );
-        })}
-      </div>
-    );
-  };
-
-  // Add this function after the renderMiniChart function
-  const FloatingParticle = ({ size, color, delay, duration, left }) => {
-    return (
-      <motion.div
-        className={`absolute rounded-full ${color} opacity-20 pointer-events-none`}
-        style={{
-          width: size,
-          height: size,
-          left: `${left}%`,
-        }}
-        initial={{ y: "110vh", opacity: 0 }}
-        animate={{
-          y: "-10vh",
-          opacity: [0, 0.2, 0.1, 0.2, 0],
-          x: [0, 10, -10, 15, -5, 0],
-        }}
-        transition={{
-          duration: duration,
-          delay: delay,
-          repeat: Number.POSITIVE_INFINITY,
-          repeatType: "loop",
-        }}
-      />
-    );
-  };
-
-  // Add this component after the FloatingParticle component
-  const BackgroundParticles = () => {
-    return (
-      <div className="absolute inset-0 overflow-hidden z-0 opacity-40">
-        <FloatingParticle
-          size="20px"
-          color="bg-pink-400"
-          delay={0}
-          duration={15}
-          left={10}
-        />
-        <FloatingParticle
-          size="30px"
-          color="bg-pink-500"
-          delay={2}
-          duration={20}
-          left={20}
-        />
-        <FloatingParticle
-          size="15px"
-          color="bg-pink-300"
-          delay={5}
-          duration={18}
-          left={30}
-        />
-        <FloatingParticle
-          size="25px"
-          color="bg-pink-600"
-          delay={7}
-          duration={25}
-          left={40}
-        />
-        <FloatingParticle
-          size="18px"
-          color="bg-pink-400"
-          delay={10}
-          duration={22}
-          left={50}
-        />
-        <FloatingParticle
-          size="22px"
-          color="bg-pink-500"
-          delay={3}
-          duration={19}
-          left={60}
-        />
-        <FloatingParticle
-          size="28px"
-          color="bg-pink-300"
-          delay={8}
-          duration={23}
-          left={70}
-        />
-        <FloatingParticle
-          size="16px"
-          color="bg-pink-600"
-          delay={12}
-          duration={17}
-          left={80}
-        />
-        <FloatingParticle
-          size="24px"
-          color="bg-pink-400"
-          delay={6}
-          duration={21}
-          left={90}
-        />
-      </div>
-    );
-  };
-
   const maxBalance = useCallback(async () => {
     const selectedChainId =
       selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
@@ -817,12 +1071,13 @@ export default function TokenSniper() {
   }, [selectedWallet?.publicKey]);
 
   const maxTradeBalance = useCallback(async () => {
+    if (!account) return showToast("Connect Wallet First");
     const selectedChainId =
       selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
 
-    if (activeTabString === "Buy") {
+    if (isBuy) {
       const balance: GetBalanceReturnType = await getBalance(config, {
-        address: selectedWallet?.publicKey as Address,
+        address: account as Address,
         chainId: selectedChainId,
         unit: "ether",
       });
@@ -831,15 +1086,19 @@ export default function TokenSniper() {
 
       return Number(formatEther(balance.value));
     } else {
-      const tokenBalance = await getL1TokenBalance(
-        selectedWallet?.publicKey,
-        tradeTokenAddress
-      );
+      const balance: GetBalanceReturnType = await getBalance(config, {
+        address: account as Address,
+        chainId: selectedChainId,
+        unit: "ether",
+        token: targetTokenAddress as Address,
+      });
 
-      setTradeSectionBalance(Number(formatEther(tokenBalance)));
-      return Number(formatEther(tokenBalance));
+      setTradeSectionBalance(
+        Number(formatUnits(balance.value, tokenInfo?.decimals || 18))
+      );
+      return Number(formatUnits(balance.value, tokenInfo?.decimals || 18));
     }
-  }, [selectedWallet?.publicKey, activeTabString, tradeTokenAddress]);
+  }, [account, isBuy, targetTokenAddress]);
 
   useEffect(() => {
     maxTradeBalance();
@@ -848,6 +1107,23 @@ export default function TokenSniper() {
   useEffect(() => {
     maxBalance();
   }, [maxBalance]);
+
+  useEffect(() => {
+    if (!isAddress(targetTokenAddress)) return;
+
+    (async () => {
+      const pair = await factoryReadContract(selectedChainId, "getPair", [
+        Eth_Address[selectedChainId],
+        targetTokenAddress,
+      ]);
+
+      if ((pair as Address).toLowerCase() === NULL_ADDRESS) {
+        setTrade({ amountIn: "", amountOut: "", isPairExist: false });
+      } else {
+        setTrade({ amountIn: "", amountOut: "", isPairExist: true });
+      }
+    })();
+  }, [targetTokenAddress, selectedChainId]);
 
   return (
     <ThemeProvider>
@@ -1179,14 +1455,28 @@ export default function TokenSniper() {
                       <TabsTrigger
                         value="Buy"
                         className="data-[state=active]:bg-pink-500 w-full py-3 data-[state=active]:text-white transition-all duration-200"
-                        onClick={() => setActiveTabString("Buy")}
+                        onClick={() => {
+                          setIsBuy(true);
+                          setTrade((prev) => ({
+                            ...prev,
+                            amountIn: "",
+                            amountOut: "",
+                          }));
+                        }}
                       >
                         BUY
                       </TabsTrigger>
                       <TabsTrigger
                         value="Sell"
                         className="data-[state=active]:bg-pink-500 w-full py-3 data-[state=active]:text-white transition-all duration-200"
-                        onClick={() => setActiveTabString("Sell")}
+                        onClick={() => {
+                          setIsBuy(false);
+                          setTrade((prev) => ({
+                            ...prev,
+                            amountIn: "",
+                            amountOut: "",
+                          }));
+                        }}
                       >
                         SELL
                       </TabsTrigger>
@@ -1204,9 +1494,9 @@ export default function TokenSniper() {
                       id="trade-token-address"
                       placeholder="0x..."
                       className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200"
-                      value={tradeTokenAddress}
+                      value={targetTokenAddress}
                       onChange={(e) => {
-                        setTradeTokenAddress(e.target.value);
+                        handleTokenInfo(e);
                       }}
                     />
                   </div>
@@ -1217,7 +1507,7 @@ export default function TokenSniper() {
                         htmlFor="trade-amount"
                         className="text-zinc-700 dark:text-zinc-300"
                       >
-                        {activeTabString === "Buy"
+                        {isBuy
                           ? selectedChain.id === "ethereum" ||
                             selectedChain.id === "base"
                             ? "ETH"
@@ -1233,7 +1523,7 @@ export default function TokenSniper() {
                       </Label>
                       <span className="text-sm text-pink-500 dark:text-pink-400 font-medium">
                         Balance:{" "}
-                        {activeTabString === "Buy"
+                        {isBuy
                           ? selectedChain.id === "ethereum" ||
                             selectedChain.id === "base"
                             ? `${Number(tradeSectionBalance).toFixed(3)} ETH`
@@ -1252,13 +1542,25 @@ export default function TokenSniper() {
                         id="trade-amount"
                         type="number"
                         className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200"
-                        value={tradeAmount}
-                        onChange={(e) => setTradeAmount(e.target.value)}
+                        value={trade.amountIn}
+                        onChange={(e) => handleAmountIn(e)}
                       />
                       <Button
                         onClick={async () => {
                           const balance = await maxTradeBalance();
-                          balance && setTradeAmount(balance.toFixed(3));
+
+                          const returnAmount = await getAmountsOutput(
+                            String(balance)
+                          );
+
+                          setTrade((prev) => ({
+                            ...prev,
+                            amountIn: getExactDecimals(
+                              balance || 0,
+                              4
+                            ).toString(),
+                            amountOut: String(returnAmount),
+                          }));
                         }}
                         variant="outline"
                         size="sm"
@@ -1267,6 +1569,16 @@ export default function TokenSniper() {
                         MAX
                       </Button>
                     </div>
+                  </div>
+
+                  <div className="mt-5">
+                    <Label
+                      htmlFor="trade-amount"
+                      className="text-zinc-700 dark:text-zinc-300"
+                    >
+                      You will get {getExactDecimals(trade.amountOut, 4) || 0}{" "}
+                      {isBuy ? tokenInfo?.symbol || "N/A" : "ETH"}
+                    </Label>
                   </div>
 
                   <div className="grid grid-cols-2 gap-6 pt-2">
@@ -1297,7 +1609,7 @@ export default function TokenSniper() {
                         </div>
                         <Slider
                           id="trade-gas-price"
-                          min={5}
+                          min={1}
                           max={100}
                           step={1}
                           value={[tradeGasPrice]}
@@ -1345,10 +1657,10 @@ export default function TokenSniper() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex-col gap-3">
-                  {!selectedWallet && (
+                  {!account && (
                     <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 bg-amber-100/30 dark:bg-amber-900/20 p-3 rounded-md mb-2">
                       <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                      <span>Private key required for transactions</span>
+                      <span>Connect Wallet for transactions</span>
                     </div>
                   )}
 
@@ -1358,10 +1670,12 @@ export default function TokenSniper() {
                   >
                     <Button
                       className="w-200 bg-gradient-to-r text-white from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 shadow-lg shadow-pink-900/20 transition-all duration-200"
-                      onClick={
-                        activeTabString === "Buy" ? handleBuy : handleSell
+                      onClick={isBuy ? handleBuy : handleSell}
+                      disabled={
+                        targetTokenAddress.trim() === "" ||
+                        !trade.amountIn ||
+                        !trade.isPairExist
                       }
-                      disabled={tradeTokenAddress.trim() === "" || !tradeAmount}
                     >
                       <motion.div
                         animate={{
