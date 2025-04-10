@@ -3,7 +3,6 @@
 import { useState, useEffect, ChangeEvent, useCallback, useMemo } from "react";
 import { useWeb3Modal } from "@web3modal/wagmi/react";
 import { getBalance, GetBalanceReturnType } from "@wagmi/core";
-import { getL1TokenBalance } from "viem/zksync";
 import {
   formatEther,
   formatUnits,
@@ -33,23 +32,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  AlertCircle,
   Wallet,
   Settings,
   BarChart3,
@@ -61,20 +49,14 @@ import {
   Target,
   DollarSign,
   ArrowLeft,
-  Percent,
   AlertTriangle,
   Eye,
   Sun,
   Plus,
   Key,
   Info,
-  ChevronDown,
   Shield,
-  Flame,
   Rocket,
-  ArrowUpRight,
-  ExternalLink,
-  Copy,
   Menu,
 } from "lucide-react";
 import { ThemeProvider } from "./theme-provider";
@@ -112,214 +94,16 @@ import {
   tokenReadContract,
   tokenWriteContract,
 } from "./contracts";
-
-interface Wallet {
-  _id: string;
-  publicKey: string;
-  isActive: boolean;
-}
-
-interface HistoryData {
-  tokenAddress: string;
-  wallet: {
-    publicKey: string;
-  };
-  buyAmount: number;
-  gasFee: string;
-  slippage: number;
-  status: boolean;
-  isSnipedAndSold: boolean;
-  createdAt: string;
-}
-
-interface TokenInfo {
-  isVerfied: boolean;
-  holders: number;
-  buyTax: number;
-  sellTax: number;
-  decimals: number;
-  totalSupply: number;
-  ownerHoldingsPercent: number;
-  lpLockPercentage: number;
-  symbol: string;
-}
-
-// --->> reuseable function of private key
-const AddPrivateKeyDialog = ({
-  trigger,
-  addWalletPrivateKey,
-  setAddWalletPrivateKey,
-  handleAddPrivateKey,
-  selectedChain,
-}: any) => {
-  return (
-    <Dialog>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="bg-white/95 dark:bg-black/95 backdrop-blur-md border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white shadow-xl shadow-pink-900/20">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
-            Add Private Key
-          </DialogTitle>
-          <DialogDescription className="text-zinc-500 dark:text-zinc-400">
-            {"Enter your private key to enable sniping on " +
-              selectedChain.name}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="private-key">Private Key</Label>
-
-            <Input
-              id="private-key"
-              type="password"
-              placeholder="Enter your private key"
-              className="bg-gray-100/50 dark:bg-zinc-900/50 border-zinc-300 dark:border-zinc-800 focus:border-pink-500 transition-colors duration-200 font-mono"
-              value={addWalletPrivateKey}
-              onChange={(e) => setAddWalletPrivateKey(e.target.value)}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-red-500 dark:text-red-400 bg-red-100/30 dark:bg-red-900/20 p-3 rounded-md">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <span>
-              Never share your private key with anyone. This key gives full
-              access to your funds.
-            </span>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button
-              className="w-full bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 text-white shadow-lg shadow-pink-900/20 transition-all duration-200"
-              onClick={handleAddPrivateKey}
-              disabled={addWalletPrivateKey.length < 64}
-            >
-              <Key className="mr-2 h-4 w-4" />
-              Add Key
-            </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-//////////////////////////////////////////
-// --->> reuseable function of geneate wallet
-const GenerateWalletDialog = ({
-  trigger,
-  newWalletAddress,
-  generatedPrivateKey,
-  shortenAddress,
-  shortenPrivateAddress,
-  handleCreateWallet,
-  selectedChain,
-  copyToClipboard,
-  setNewWalletAddress,
-  setGeneratedPrivateKey,
-}: any) => {
-  return (
-    <Dialog>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="bg-white/95 dark:bg-black/95 backdrop-blur-md border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white shadow-xl shadow-pink-900/20">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
-            Generate New Wallet
-          </DialogTitle>
-          <DialogDescription className="text-zinc-500 dark:text-zinc-400">
-            Create a new wallet for {selectedChain.name}. Make sure to save your
-            private key securely.
-          </DialogDescription>
-        </DialogHeader>
-
-        {newWalletAddress ? (
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Wallet Address</Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => copyToClipboard(newWalletAddress)}
-                >
-                  <Copy className="h-3 w-3 mr-1" />
-                  Copy
-                </Button>
-              </div>
-              <div className="bg-gray-100/50 dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-800 rounded-md p-2 text-sm font-mono">
-                {shortenAddress(newWalletAddress)}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Private Key</Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  onClick={() => copyToClipboard(generatedPrivateKey)}
-                >
-                  <Copy className="h-3 w-3 mr-1" />
-                  Copy
-                </Button>
-              </div>
-              <div className="bg-gray-100/50 dark:bg-zinc-900/50 border border-zinc-300 dark:border-zinc-800 rounded-md p-2 text-sm font-mono">
-                {shortenPrivateAddress(generatedPrivateKey)}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-red-500 dark:text-red-400 bg-red-100/30 dark:bg-red-900/20 p-3 rounded-md">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>
-                Save this private key securely! If lost, you cannot recover your
-                funds.
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 bg-gray-100/30 dark:bg-zinc-900/30 p-3 rounded-md">
-              <Info className="h-4 w-4 text-pink-500" />
-              <span>
-                A new wallet will be generated for {selectedChain.name}.
-              </span>
-            </div>
-          </div>
-        )}
-
-        <DialogFooter>
-          {newWalletAddress ? (
-            <DialogClose asChild>
-              <Button
-                className="w-full bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 text-white shadow-lg shadow-pink-900/20 transition-all duration-200"
-                onClick={() => {
-                  setNewWalletAddress("");
-                  setGeneratedPrivateKey("");
-                }}
-              >
-                <X className="mr-2 h-4 w-4" />
-                Close
-              </Button>
-            </DialogClose>
-          ) : (
-            <Button
-              className="w-full bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 text-white shadow-lg shadow-pink-900/20 transition-all duration-200"
-              onClick={(e) => {
-                e.stopPropagation(), handleCreateWallet();
-              }}
-            >
-              <Key className="mr-2 h-4 w-4" />
-              Generate Wallet
-            </Button>
-          )}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
+import {
+  HistoryData,
+  TokenInfo,
+  Wallet as WalletType,
+} from "./types/trade.types";
+import { BackgroundParticles } from "./components/floating-particles";
+import { AddPrivateKeyDialog } from "./components/add-pk-dialog";
+import { GenerateWalletDialog } from "./components/generate-pk-dialog";
+import { SafetyFeatures } from "./components/safety-features";
+import { MonitoringSection } from "./components/monitoring-section";
 
 // Replace the existing renderMiniChart function with this enhanced animated version
 // const renderMiniChart = (data) => {
@@ -347,103 +131,6 @@ const GenerateWalletDialog = ({
 //     </div>
 //   );
 // };
-
-// Add this function after the renderMiniChart function
-const FloatingParticle = ({ size, color, delay, duration, left }) => {
-  return (
-    <motion.div
-      className={`absolute rounded-full ${color} opacity-20 pointer-events-none`}
-      style={{
-        width: size,
-        height: size,
-        left: `${left}%`,
-      }}
-      initial={{ y: "110vh", opacity: 0 }}
-      animate={{
-        y: "-10vh",
-        opacity: [0, 0.2, 0.1, 0.2, 0],
-        x: [0, 10, -10, 15, -5, 0],
-      }}
-      transition={{
-        duration: duration,
-        delay: delay,
-        repeat: Number.POSITIVE_INFINITY,
-        repeatType: "loop",
-      }}
-    />
-  );
-};
-
-// Add this component after the FloatingParticle component
-const BackgroundParticles = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden z-0 opacity-40">
-      <FloatingParticle
-        size="20px"
-        color="bg-pink-400"
-        delay={0}
-        duration={15}
-        left={10}
-      />
-      <FloatingParticle
-        size="30px"
-        color="bg-pink-500"
-        delay={2}
-        duration={20}
-        left={20}
-      />
-      <FloatingParticle
-        size="15px"
-        color="bg-pink-300"
-        delay={5}
-        duration={18}
-        left={30}
-      />
-      <FloatingParticle
-        size="25px"
-        color="bg-pink-600"
-        delay={7}
-        duration={25}
-        left={40}
-      />
-      <FloatingParticle
-        size="18px"
-        color="bg-pink-400"
-        delay={10}
-        duration={22}
-        left={50}
-      />
-      <FloatingParticle
-        size="22px"
-        color="bg-pink-500"
-        delay={3}
-        duration={19}
-        left={60}
-      />
-      <FloatingParticle
-        size="28px"
-        color="bg-pink-300"
-        delay={8}
-        duration={23}
-        left={70}
-      />
-      <FloatingParticle
-        size="16px"
-        color="bg-pink-600"
-        delay={12}
-        duration={17}
-        left={80}
-      />
-      <FloatingParticle
-        size="24px"
-        color="bg-pink-400"
-        delay={6}
-        duration={21}
-        left={90}
-      />
-    </div>
-  );
-};
 
 const chains = [
   { id: "ethereum", name: "Ethereum", icon: DollarSign, color: "pink" },
@@ -478,15 +165,15 @@ export default function TokenSniper() {
   //   unit: "ether",
   // });
 
-  const [connected, setConnected] = useState(false);
-  const [address, setAddress] = useState("");
+  // const [connected, setConnected] = useState(false);
+  // const [address, setAddress] = useState("");
   const [balance, setBalance] = useState(0);
   const [tradeSectionBalance, setTradeSectionBalance] = useState(0);
   const [targetTokenAddress, setTargetTokenAddress] = useState("");
   const [amount, setAmount] = useState("0.1");
   const [gasPrice, setGasPrice] = useState(30);
   const [slippage, setSlippage] = useState(15);
-  const [monitoring, setMonitoring] = useState(false);
+  // const [monitoring, setMonitoring] = useState(false);
   const [selectedChain, setSelectedChain] = useState({
     id: "ethereum",
     name: "Ethereum",
@@ -499,7 +186,7 @@ export default function TokenSniper() {
   const [userWallets, setUserWallets] = useState([]);
   const [historyData, setHistoryData] = useState([]);
   const [monitorTableData, setMonitorTableData] = useState([]);
-  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
+  const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [showTokenInfo, setShowTokenInfo] = useState(false);
   const [isTradeModal, setIsTradeModal] = useState(false);
@@ -529,8 +216,8 @@ export default function TokenSniper() {
     isPairExist: false,
   });
 
-  const [progress, setProgress] = useState(0);
-  const [chartData, setChartData] = useState([]);
+  // const [progress, setProgress] = useState(0);
+  // const [chartData, setChartData] = useState([]);
 
   // const [autoBuyOnLiq, setAutoBuyOnLiq] = useState(true);
   // const [maxBuyDelay, setMaxBuyDelay] = useState(3);
@@ -592,41 +279,6 @@ export default function TokenSniper() {
     },
     [getAmountsOutput]
   );
-
-  // const swap = useCallback(async () => {
-  //   try {
-  //     if (!account) return showToast("Connect Wallet");
-  //     if (balance?.token <= 0) return showToast("Balance is less than 0");
-
-  //     const amountOut = Number(amount.token) - Number(amount.token) * 0.08;
-
-  //     const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
-
-  //     const tx = await routerWriteContract(
-  //       "swapExactETHForTokensSupportingFeeOnTransferTokens",
-  //       [
-  //         parseEther(amountOut.toString()),
-  //         [weth, tokenAddress],
-  //         account,
-  //         deadline,
-  //       ],
-  //       parseEther(amount.eth.toString())
-  //     );
-
-  //     console.log(tx, "tx");
-
-  //     showToast("Buy Successful", "success");
-
-  //     setTrx((o) => ({ ...o, isBought: true }));
-
-  //     //   await new Promise((resolve) => setTimeout(resolve, 2000));
-
-  //     await fetchTokenBalance();
-  //   } catch (e) {
-  //     console.log(e);
-  //     showToast(e.shortMessage);
-  //   }
-  // }, [account, amount.eth, amount.token, balance?.token, fetchTokenBalance]);
 
   // Trade function here
   const handleBuy = useCallback(async () => {
@@ -762,44 +414,44 @@ export default function TokenSniper() {
   //////////////////////////////////////////
 
   // Simulate progress for monitoring
-  useEffect(() => {
-    if (monitoring) {
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          const newProgress = prev + 1;
-          if (newProgress >= 100) {
-            clearInterval(interval);
-            return 100;
-          }
-          return newProgress;
-        });
-      }, 300);
-      return () => clearInterval(interval);
-    } else {
-      setProgress(0);
-    }
-  }, [monitoring]);
+  // useEffect(() => {
+  //   if (monitoring) {
+  //     const interval = setInterval(() => {
+  //       setProgress((prev) => {
+  //         const newProgress = prev + 1;
+  //         if (newProgress >= 100) {
+  //           clearInterval(interval);
+  //           return 100;
+  //         }
+  //         return newProgress;
+  //       });
+  //     }, 300);
+  //     return () => clearInterval(interval);
+  //   } else {
+  //     setProgress(0);
+  //   }
+  // }, [monitoring]);
 
-  // Generate fake chart data
-  useEffect(() => {
-    const generateChartData = () => {
-      const data = [];
-      let value = 100;
-      for (let i = 0; i < 20; i++) {
-        value = value + (Math.random() * 10 - 5);
-        data.push(value);
-      }
-      return data;
-    };
+  // // Generate fake chart data
+  // useEffect(() => {
+  //   const generateChartData = () => {
+  //     const data = [];
+  //     let value = 100;
+  //     for (let i = 0; i < 20; i++) {
+  //       value = value + (Math.random() * 10 - 5);
+  //       data.push(value);
+  //     }
+  //     return data;
+  //   };
 
-    setChartData(generateChartData());
+  //   setChartData(generateChartData());
 
-    const interval = setInterval(() => {
-      setChartData(generateChartData());
-    }, 5000);
+  //   const interval = setInterval(() => {
+  //     setChartData(generateChartData());
+  //   }, 5000);
 
-    return () => clearInterval(interval);
-  }, []);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // get all wallets api function
   const fetchUserWallets = async () => {
@@ -810,7 +462,7 @@ export default function TokenSniper() {
     if (data) {
       setUserWallets(data);
       const activeWallet =
-        data.find((wallet: Wallet) => wallet.isActive) || null;
+        data.find((wallet: WalletType) => wallet.isActive) || null;
       setSelectedWallet(activeWallet);
     }
     if (monitorData) {
@@ -920,16 +572,6 @@ export default function TokenSniper() {
     }));
   };
 
-  const handleSafetyChange = (field: string, value: any) => {
-    setSettings((prev) => ({
-      ...prev,
-      safetyFeatures: {
-        ...prev.safetyFeatures,
-        [field]: value,
-      },
-    }));
-  };
-
   type ProfitLevelKey = "enabled" | "profitTarget" | "sellPercentage";
 
   const updateProfitLevel = (
@@ -993,7 +635,7 @@ export default function TokenSniper() {
   ///////////////////////////////////////
 
   // Api call of active the selected wallet
-  const handleSelectWallet = async (wallet: Wallet) => {
+  const handleSelectWallet = async (wallet: WalletType) => {
     const { success } = await activeSelectedWallet({
       walletId: wallet._id,
     });
@@ -1346,7 +988,7 @@ export default function TokenSniper() {
           {userWallets && (
             <div className="p-4 space-y-4">
               <div className="flex space-x-4 overflow-x-auto p-2">
-                {userWallets.map((wallet: Wallet, indexx) => (
+                {userWallets.map((wallet: WalletType, indexx) => (
                   <Card
                     key={wallet?._id}
                     className="pt-6 min-w-[150px] cursor-pointer border-2"
@@ -2146,336 +1788,9 @@ export default function TokenSniper() {
                           )}
                         </div>
                       </div>
-                      {/* {monitoring ? (
-                      <div className="space-y-6">
-                        {showTokenInfo && tokenInfo && (
-                          <div className="bg-gradient-to-r from-gray-100 to-white dark:from-zinc-900 dark:to-black p-4 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 flex items-center justify-center text-white font-bold text-lg">
-                                  {tokenInfo.symbol.charAt(0)}
-                                </div>
-                                <div>
-                                  <h3 className="font-bold text-lg text-zinc-900 dark:text-white">
-                                    {tokenInfo.name}
-                                  </h3>
-                                  <div className="flex items-center gap-2">
-                                    <Badge className="bg-pink-100 dark:bg-pink-900/50 text-pink-700 dark:text-pink-300 border-none">
-                                      {tokenInfo.symbol}
-                                    </Badge>
-                                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                      Created {tokenInfo.createdAt}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
 
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 border-zinc-300 dark:border-zinc-800 hover:border-pink-500 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 transition-all duration-200"
-                                >
-                                  <ExternalLink className="h-3 w-3 mr-1 text-pink-500" />
-                                  Explorer
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 border-zinc-300 dark:border-zinc-800 hover:border-pink-500 hover:bg-pink-50/30 dark:hover:bg-pink-950/30 transition-all duration-200"
-                                >
-                                  <Copy className="h-3 w-3 mr-1 text-pink-500" />
-                                  Copy
-                                </Button>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                              <div className="bg-white/70 dark:bg-black/50 p-3 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50">
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-                                  Owner %
-                                </p>
-                                <p className="font-bold text-zinc-900 dark:text-white">
-                                  {tokenInfo.ownerHoldingsPercent}
-                                </p>
-                              </div>
-                              <div className="bg-white/70 dark:bg-black/50 p-3 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50">
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-                                  Holders
-                                </p>
-                                <p className="font-bold text-zinc-900 dark:text-white">
-                                  {tokenInfo.holders}
-                                </p>
-                              </div>
-                              <div className="bg-white/70 dark:bg-black/50 p-3 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50">
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-                                  Buy Tax
-                                </p>
-                                <p className="font-bold text-zinc-900 dark:text-white">
-                                  {tokenInfo.buyTax}
-                                </p>
-                              </div>
-                              <div className="bg-white/70 dark:bg-black/50 p-3 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50">
-                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-                                  Sell Tax
-                                </p>
-                                <p className="font-bold text-zinc-900 dark:text-white">
-                                  {tokenInfo.sellTax}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        <motion.div
-                          className="bg-gradient-to-r from-gray-100 to-white dark:from-zinc-900 dark:to-black p-4 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5 }}
-                        >
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                              <motion.div
-                                className="h-3 w-3 bg-pink-500 rounded-full"
-                                animate={{
-                                  scale: [1, 1.2, 1],
-                                  opacity: [0.7, 1, 0.7],
-                                }}
-                                transition={{
-                                  duration: 1.5,
-                                  repeat: Number.POSITIVE_INFINITY,
-                                  repeatType: "loop",
-                                }}
-                              />
-                              <span className="font-medium">
-                                Monitoring token:{" "}
-                                <span className="text-pink-500 dark:text-pink-400">
-                                  {address.substring(0, 6)}...
-                                  {address.substring(address.length - 4)}
-                                </span>
-                              </span>
-                            </div>
-                            <Badge
-                              variant="outline"
-                              className="bg-white/50 dark:bg-zinc-800/50 border-pink-400/30 dark:border-pink-500/30 text-pink-500 dark:text-pink-400"
-                            >
-                              <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{
-                                  duration: 2,
-                                  repeat: Number.POSITIVE_INFINITY,
-                                  ease: "linear",
-                                }}
-                              >
-                                <RefreshCw className="h-3 w-3 mr-1" />
-                              </motion.div>
-                              Live
-                            </Badge>
-                          </div>
-
-                          <div className="mb-2 flex justify-between items-center">
-                            <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                              Scanning for liquidity...
-                            </span>
-                            <span className="text-sm text-pink-500 dark:text-pink-400">
-                              {progress}%
-                            </span>
-                          </div>
-                          <div className="bg-gray-200 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
-                            <motion.div
-                              className="h-full bg-pink-500 rounded-full"
-                              style={{ width: `${progress}%` }}
-                              initial={{ width: "0%" }}
-                              animate={{ width: `${progress}%` }}
-                              transition={{ duration: 0.5 }}
-                            />
-                          </div>
-                        </motion.div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <Card className="bg-gradient-to-br from-gray-50 to-white dark:from-zinc-900 dark:to-black border-zinc-200/50 dark:border-zinc-800/50 shadow-md">
-                            <CardHeader className="py-3 px-4">
-                              <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                                <Flame className="h-4 w-4 text-pink-500" />
-                                Liquidity Status
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="py-2 px-4">
-                              <div className="flex items-center justify-between">
-                                <span className="text-lg font-bold">
-                                  Pending
-                                </span>
-                                <div className="flex items-center gap-1 bg-yellow-500/20 text-yellow-600 dark:text-yellow-500 px-2 py-1 rounded-full text-xs">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  Waiting
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          <Card className="bg-gradient-to-br from-gray-50 to-white dark:from-zinc-900 dark:to-black border-zinc-200/50 dark:border-zinc-800/50 shadow-md">
-                            <CardHeader className="py-3 px-4">
-                              <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                                <Zap className="h-4 w-4 text-pink-500" />
-                                Current Gas
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="py-2 px-4">
-                              <div className="flex items-center justify-between">
-                                <span className="text-lg font-bold">
-                                  28 Gwei
-                                </span>
-                                <div className="flex items-center gap-1 bg-pink-500/20 text-pink-600 dark:text-pink-500 px-2 py-1 rounded-full text-xs">
-                                  <ChevronDown className="h-3 w-3" />
-                                  Low
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          <Card className="bg-gradient-to-br from-gray-50 to-white dark:from-zinc-900 dark:to-black border-zinc-200/50 dark:border-zinc-800/50 shadow-md">
-                            <CardHeader className="py-3 px-4">
-                              <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                                <Percent className="h-4 w-4 text-pink-500" />
-                                Estimated Buy Tax
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent className="py-2 px-4">
-                              <div className="flex items-center justify-between">
-                                <span className="text-lg font-bold">
-                                  Scanning...
-                                </span>
-                                <RefreshCw className="h-4 w-4 animate-spin text-pink-500" />
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="md:col-span-2">
-                            <div className="bg-gradient-to-br from-gray-50 to-white dark:from-zinc-900 dark:to-black p-4 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
-                              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3 flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-pink-500" />
-                                Liquidity Detection Log
-                              </h3>
-                              <div className="space-y-2 text-sm">
-                                <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 bg-gray-100/50 dark:bg-zinc-900/50 p-2 rounded-md">
-                                  <Clock className="h-4 w-4 text-pink-500 dark:text-pink-400" />
-                                  <span className="text-pink-500 dark:text-pink-400">
-                                    21:45:32
-                                  </span>
-                                  <span>
-                                    Scanning for liquidity addition...
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 bg-gray-100/50 dark:bg-zinc-900/50 p-2 rounded-md">
-                                  <Clock className="h-4 w-4 text-pink-500 dark:text-pink-400" />
-                                  <span className="text-pink-500 dark:text-pink-400">
-                                    21:45:28
-                                  </span>
-                                  <span>
-                                    Monitoring mempool for token transactions
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 bg-gray-100/50 dark:bg-zinc-900/50 p-2 rounded-md">
-                                  <Clock className="h-4 w-4 text-pink-500 dark:text-pink-400" />
-                                  <span className="text-pink-500 dark:text-pink-400">
-                                    21:45:15
-                                  </span>
-                                  <span>
-                                    Started monitoring token{" "}
-                                    {address.substring(0, 6)}...
-                                    {address.substring(address.length - 4)}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div>
-                            <Card className="bg-gradient-to-br from-gray-50 to-white dark:from-zinc-900 dark:to-black border-zinc-200/50 dark:border-zinc-800/50 shadow-md">
-                              <CardHeader className="py-3 px-4">
-                                <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
-                                  <BarChart3 className="h-4 w-4 text-pink-500" />
-                                  Price Trend
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="py-2 px-4">
-                                <div className="flex flex-col">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-lg font-bold">
-                                      Analyzing
-                                    </span>
-                                    <div className="flex items-center gap-1 text-pink-500">
-                                      <ArrowUpRight className="h-4 w-4" />
-                                      <span className="text-xs">+2.5%</span>
-                                    </div>
-                                  </div>
-                                  {renderMiniChart(chartData)}
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <motion.div
-                        className="flex flex-col items-center justify-center py-12 text-center"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        <motion.div
-                          className="bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 p-6 rounded-full mb-6 shadow-lg shadow-pink-900/20"
-                          animate={{
-                            scale: [1, 1.05, 1],
-                            boxShadow: [
-                              "0 10px 15px -3px rgba(213, 63, 140, 0.2)",
-                              "0 15px 25px -5px rgba(213, 63, 140, 0.3)",
-                              "0 10px 15px -3px rgba(213, 63, 140, 0.2)",
-                            ],
-                          }}
-                          transition={{
-                            duration: 3,
-                            repeat: Number.POSITIVE_INFINITY,
-                            repeatType: "reverse",
-                          }}
-                        >
-                          <Target className="h-12 w-12 text-white" />
-                        </motion.div>
-                        <motion.h3
-                          className="text-2xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600"
-                          initial={{ y: 20 }}
-                          animate={{ y: 0 }}
-                          transition={{ duration: 0.5, delay: 0.2 }}
-                        >
-                          No Active Monitoring
-                        </motion.h3>
-                        <motion.p
-                          className="text-zinc-500 dark:text-zinc-400 max-w-md mb-8"
-                          initial={{ y: 20 }}
-                          animate={{ y: 0 }}
-                          transition={{ duration: 0.5, delay: 0.3 }}
-                        >
-                          Enter a token contract address and click "Start
-                          Monitoring" to begin sniping
-                        </motion.p>
-                        <motion.div
-                          initial={{ y: 20 }}
-                          animate={{ y: 0 }}
-                          transition={{ duration: 0.5, delay: 0.4 }}
-                        >
-                          <Button
-                            className="bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 hover:from-pink-400 hover:to-pink-300 dark:hover:from-pink-500 dark:hover:to-pink-400 shadow-lg shadow-pink-900/20 transition-all duration-200 px-8 py-6"
-                            disabled={!connected || address.trim() === ""}
-                            onClick={handleStartMonitoring}
-                          >
-                            <Eye className="mr-2 h-5 w-5" />
-                            Start Monitoring
-                          </Button>
-                        </motion.div>
-                      </motion.div>
-                    )} */}
+                      {/* Monitoring Section should be here dont remove this */}
+                      {/* <MonitoringSection /> */}
                     </TabsContent>
                     {/* //////////////////// END /////////////////////////// */}
 
@@ -2665,89 +1980,8 @@ export default function TokenSniper() {
                           </div>
                         </div>
 
-                        {/* <div className="bg-gradient-to-r from-gray-50 to-white dark:from-zinc-900 dark:to-black p-5 rounded-lg border border-zinc-200/50 dark:border-zinc-800/50 shadow-lg">
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-pink-300 dark:from-pink-400 dark:to-pink-600">
-                          <Shield className="h-5 w-5 text-pink-500" />
-                          Safety Features
-                        </h3>
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between p-3 bg-gray-100/50 dark:bg-zinc-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-900/70 transition-colors duration-200">
-                            <div className="space-y-0.5">
-                              <Label
-                                htmlFor="anti-rug"
-                                className="text-zinc-900 dark:text-white font-medium"
-                              >
-                                Anti-Rug Pull Protection
-                              </Label>
-                              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                Detect and avoid potential rug pulls
-                              </p>
-                            </div>
-                            <Switch
-                              id="anti-rug"
-                              checked={settings.safetyFeatures.antiRugPull}
-                              onCheckedChange={(checked) =>
-                                handleSafetyChange("antiRugPull", checked)
-                              }
-                              className="data-[state=checked]:bg-pink-500"
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between p-3 bg-gray-100/50 dark:bg-zinc-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-900/70 transition-colors duration-200">
-                            <div className="space-y-0.5">
-                              <Label
-                                htmlFor="front-running"
-                                className="text-zinc-900 dark:text-white font-medium"
-                              >
-                                Front-Running Protection
-                              </Label>
-                              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                Prevent your transactions from being front-run
-                              </p>
-                            </div>
-                            <Switch
-                              id="front-running"
-                              checked={
-                                settings.safetyFeatures.frontRunningProtection
-                              }
-                              onCheckedChange={(checked) =>
-                                handleSafetyChange(
-                                  "frontRunningProtection",
-                                  checked
-                                )
-                              }
-                              className="data-[state=checked]:bg-pink-500"
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between p-3 bg-gray-100/50 dark:bg-zinc-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-900/70 transition-colors duration-200">
-                            <div className="space-y-0.5">
-                              <Label
-                                htmlFor="multi-wallet"
-                                className="text-zinc-900 dark:text-white font-medium"
-                              >
-                                Multi-Wallet Sniping
-                              </Label>
-                              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                Distribute buys across multiple wallets
-                              </p>
-                            </div>
-                            <Switch
-                              id="multi-wallet"
-                              checked={
-                                settings.safetyFeatures.multiWalletSniping
-                              }
-                              onCheckedChange={(checked) =>
-                                handleSafetyChange(
-                                  "multiWalletSniping",
-                                  checked
-                                )
-                              }
-                              className="data-[state=checked]:bg-pink-500"
-                            />
-                          </div>
-                        </div>
-                      </div> */}
+                        {/* Safety Features should be here dont remove this */}
+                        {/* <SafetyFeatures /> */}
 
                         <motion.div
                           whileHover={{ scale: 1.02 }}
