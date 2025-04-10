@@ -51,7 +51,6 @@ import {
   ArrowLeft,
   AlertTriangle,
   Eye,
-  Sun,
   Plus,
   Key,
   Info,
@@ -73,6 +72,7 @@ import {
 } from "./utils/constant";
 import {
   activeSelectedWallet,
+  buyToken,
   createSniper,
   createSniperSettings,
   generateWallet,
@@ -82,6 +82,7 @@ import {
   getSniperSettings,
   getTokenInfo,
   savePrivateKey,
+  sellToken,
 } from "./utils/apiHandler";
 import { config, showToast } from "./utils/config";
 import { Address } from "./types/general.types";
@@ -102,8 +103,6 @@ import {
 import { BackgroundParticles } from "./components/floating-particles";
 import { AddPrivateKeyDialog } from "./components/add-pk-dialog";
 import { GenerateWalletDialog } from "./components/generate-pk-dialog";
-import { SafetyFeatures } from "./components/safety-features";
-import { MonitoringSection } from "./components/monitoring-section";
 
 // Replace the existing renderMiniChart function with this enhanced animated version
 // const renderMiniChart = (data) => {
@@ -158,13 +157,6 @@ export default function TokenSniper() {
   const { account, user } = useAuth();
   const { open } = useWeb3Modal();
 
-  // const balance: GetBalanceReturnType = await getBalance(config, {
-  //   address: data?.user?.walletAddress as Address,
-  //   chainId: BSC_CHAIN_ID,
-  //   token: coin.tokenAddress as Address,
-  //   unit: "ether",
-  // });
-
   // const [connected, setConnected] = useState(false);
   // const [address, setAddress] = useState("");
   const [balance, setBalance] = useState(0);
@@ -192,7 +184,7 @@ export default function TokenSniper() {
   const [isTradeModal, setIsTradeModal] = useState(false);
   const [isBuy, setIsBuy] = useState(true);
   const [tradeAmount, setTradeAmount] = useState("");
-  const [tradeGasPrice, setTradeGasPrice] = useState(35);
+  const [tradeGasPrice, setTradeGasPrice] = useState(5);
   const [tradeSlippage, setTradeSlippage] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState({
@@ -291,27 +283,41 @@ export default function TokenSniper() {
 
       setIsLoading(true);
 
-      const amountOut =
-        Number(trade.amountOut) - Number(trade.amountOut) * (slippage / 100);
-
-      const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
-
-      const tx = await routerWriteContract(
+      const body = {
+        tokenAddress: targetTokenAddress,
+        buyAmount: trade.amountIn.toString(),
+        gasFee: gasPrice,
+        slippage: slippage,
         selectedChainId,
-        "swapExactETHForTokensSupportingFeeOnTransferTokens",
-        [
-          parseUnits(amountOut.toString(), Number(tokenInfo?.decimals)),
-          [Eth_Address[selectedChainId], targetTokenAddress],
-          account,
-          deadline,
-        ],
-        gasPrice,
-        parseEther(trade.amountIn.toString())
-      );
+      };
 
-      console.log(tx, "tx");
+      const { message, success } = await buyToken(body);
 
-      showToast("Buy Successful", "success");
+      if (!success) throw new Error(message);
+
+      showToast(message, success ? "success" : "error");
+
+      // const amountOut =
+      //   Number(trade.amountOut) - Number(trade.amountOut) * (slippage / 100);
+
+      // const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
+
+      // const tx = await routerWriteContract(
+      //   selectedChainId,
+      //   "swapExactETHForTokensSupportingFeeOnTransferTokens",
+      //   [
+      //     parseUnits(amountOut.toString(), Number(tokenInfo?.decimals)),
+      //     [Eth_Address[selectedChainId], targetTokenAddress],
+      //     account,
+      //     deadline,
+      //   ],
+      //   gasPrice,
+      //   parseEther(trade.amountIn.toString())
+      // );
+
+      // console.log(tx, "tx");
+
+      // showToast("Buy Successful", "success");
 
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -322,7 +328,7 @@ export default function TokenSniper() {
     } catch (e: any) {
       setIsLoading(false);
       console.log(e);
-      showToast(e.shortMessage);
+      showToast(e?.response?.message ?? e?.message ?? e);
     }
   }, [
     account,
@@ -346,49 +352,63 @@ export default function TokenSniper() {
 
       setIsLoading(true);
 
-      const amountOut =
-        Number(trade.amountOut) - Number(trade.amountOut) * (slippage / 100);
-
-      const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
-
-      const allowance = await tokenReadContract(
+      const body = {
+        tokenAddress: targetTokenAddress,
+        buyAmount: trade.amountIn.toString(),
+        gasFee: gasPrice,
+        slippage: slippage,
         selectedChainId,
-        targetTokenAddress as Address,
-        "allowance",
-        [account, routerAddress[selectedChainId]]
-      );
+      };
 
-      if (
-        Number(formatUnits(allowance as bigint, Number(tokenInfo?.decimals))) <
-        Number(trade.amountIn)
-      ) {
-        await tokenWriteContract(
-          selectedChainId,
-          targetTokenAddress as Address,
-          "approve",
-          [
-            routerAddress[selectedChainId],
-            "99999999999999999999999999999999999999",
-          ]
-        );
-      }
+      const { message, success } = await sellToken(body);
 
-      const tx = await routerWriteContract(
-        selectedChainId,
-        "swapExactTokensForETHSupportingFeeOnTransferTokens",
-        [
-          parseUnits(trade.amountIn.toString(), Number(tokenInfo?.decimals)),
-          parseEther(amountOut.toString()),
-          [targetTokenAddress, Eth_Address[selectedChainId]],
-          account,
-          deadline,
-        ],
-        gasPrice
-      );
+      if (!success) throw new Error(message);
 
-      console.log(tx, "tx");
+      showToast(message, success ? "success" : "error");
 
-      showToast("Buy Successful", "success");
+      // const amountOut =
+      //   Number(trade.amountOut) - Number(trade.amountOut) * (slippage / 100);
+
+      // const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
+
+      // const allowance = await tokenReadContract(
+      //   selectedChainId,
+      //   targetTokenAddress as Address,
+      //   "allowance",
+      //   [account, routerAddress[selectedChainId]]
+      // );
+
+      // if (
+      //   Number(formatUnits(allowance as bigint, Number(tokenInfo?.decimals))) <
+      //   Number(trade.amountIn)
+      // ) {
+      //   await tokenWriteContract(
+      //     selectedChainId,
+      //     targetTokenAddress as Address,
+      //     "approve",
+      //     [
+      //       routerAddress[selectedChainId],
+      //       "99999999999999999999999999999999999999",
+      //     ]
+      //   );
+      // }
+
+      // const tx = await routerWriteContract(
+      //   selectedChainId,
+      //   "swapExactTokensForETHSupportingFeeOnTransferTokens",
+      //   [
+      //     parseUnits(trade.amountIn.toString(), Number(tokenInfo?.decimals)),
+      //     parseEther(amountOut.toString()),
+      //     [targetTokenAddress, Eth_Address[selectedChainId]],
+      //     account,
+      //     deadline,
+      //   ],
+      //   gasPrice
+      // );
+
+      // console.log(tx, "tx");
+
+      // showToast("Buy Successful", "success");
 
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -399,7 +419,7 @@ export default function TokenSniper() {
     } catch (e: any) {
       setIsLoading(false);
       console.log(e);
-      showToast(e.shortMessage);
+      showToast(e?.response?.message ?? e?.message ?? e);
     }
   }, [
     account,
@@ -713,13 +733,13 @@ export default function TokenSniper() {
   }, [selectedWallet?.publicKey]);
 
   const maxTradeBalance = useCallback(async () => {
-    if (!account) return;
+    if (!selectedWallet?.publicKey) return;
     const selectedChainId =
       selectedChain.id === "bsc" ? 56 : selectedChain.id === "base" ? 8453 : 1;
 
     if (isBuy) {
       const balance: GetBalanceReturnType = await getBalance(config, {
-        address: account as Address,
+        address: selectedWallet?.publicKey as Address,
         chainId: selectedChainId,
         unit: "ether",
       });
@@ -729,7 +749,7 @@ export default function TokenSniper() {
       return Number(formatEther(balance.value));
     } else {
       const balance: GetBalanceReturnType = await getBalance(config, {
-        address: account as Address,
+        address: selectedWallet?.publicKey as Address,
         chainId: selectedChainId,
         unit: "ether",
         token: targetTokenAddress as Address,
@@ -740,15 +760,12 @@ export default function TokenSniper() {
       );
       return Number(formatUnits(balance.value, tokenInfo?.decimals || 18));
     }
-  }, [account, isBuy, targetTokenAddress]);
-
-  useEffect(() => {
-    maxTradeBalance();
-  }, [maxTradeBalance]);
+  }, [selectedWallet?.publicKey, isBuy, targetTokenAddress]);
 
   useEffect(() => {
     maxBalance();
-  }, [maxBalance]);
+    maxTradeBalance();
+  }, [maxBalance, maxTradeBalance]);
 
   useEffect(() => {
     if (!isAddress(targetTokenAddress)) return;

@@ -154,3 +154,35 @@ export function getTokenInfo(tokenAddress: String, chainId: number) {
 
   return handleApiRequest(config);
 }
+
+// API function to buy tokens
+export function buyToken(body: Object) {
+  const token = localStorage.getItem("token");
+
+  const config = {
+    url: `${serverUrl}/trade/buy`,
+    method: "POST",
+    data: body,
+    headers: {
+      Authorization: `${token}`,
+    },
+  };
+
+  return handleApiRequest(config);
+}
+
+// API function to sell tokens
+export function sellToken(body: Object) {
+  const token = localStorage.getItem("token");
+
+  const config = {
+    url: `${serverUrl}/trade/sell`,
+    method: "POST",
+    data: body,
+    headers: {
+      Authorization: `${token}`,
+    },
+  };
+
+  return handleApiRequest(config);
+}
