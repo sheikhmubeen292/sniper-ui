@@ -1930,7 +1930,7 @@ export default function TokenSniper() {
                                     </span>
                                   </div>
                                   <Badge className="w-fit sm:w-auto bg-gradient-to-r from-pink-500 to-pink-400 dark:from-pink-600 dark:to-pink-500 text-white border-none shadow-sm shadow-pink-900/20">
-                                    {level.profitTarget}% of position
+                                    {level.profitTarget}% of profit
                                   </Badge>
                                 </div>
 
