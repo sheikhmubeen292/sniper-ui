@@ -19,11 +19,11 @@ const useAuth = () => {
 };
 
 // const serverUrl = "https://urchin-app-jfcdz.ondigitalocean.app";
-const serverUrl =
-  process.env.NODE_ENV === "production"
-    ? "https://whale-app-z3vag.ondigitalocean.app"
-    : "http://localhost:5002";
-// const serverUrl = "https://clownfish-app-j6rix.ondigitalocean.app";
+// const serverUrl =
+//   process.env.NODE_ENV === "production"
+//     ? "https://whale-app-z3vag.ondigitalocean.app"
+//     : "http://localhost:5002";
+const serverUrl = "https://whale-app-z3vag.ondigitalocean.app";
 
 // const socket = io(serverUrl);
 

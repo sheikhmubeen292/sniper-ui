@@ -57,6 +57,7 @@ import {
   Shield,
   Rocket,
   Menu,
+  Copy,
 } from "lucide-react";
 import { ThemeProvider } from "./theme-provider";
 import { ThemeToggle } from "./theme-toggle";
@@ -1018,10 +1019,18 @@ export default function TokenSniper() {
                     onClick={() => handleSelectWallet(wallet)}
                   >
                     <CardContent>
-                      <p className="font-bold">Wallet {indexx + 1}</p>
-                      <p className="text-md text-gray-500">
-                        {shortenAddress(wallet?.publicKey)}
-                      </p>
+                      <div className="flex gap-2">
+                        <>
+                          <p className="font-bold">Wallet {indexx + 1}</p>
+                          <p className="text-md text-gray-500">
+                            {shortenAddress(wallet?.publicKey)}
+                          </p>
+                        </>
+                        <Copy
+                          className="text-lg"
+                          onClick={() => copyToClipboard(wallet?.publicKey)}
+                        />
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
